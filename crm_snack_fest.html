@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Snack Fest CRM</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; -webkit-tap-highlight-color: transparent; }
+body { background: #f4f6fb; color: #1a1a2e; min-height: 100vh; padding-bottom: 90px; }
+
+.header { background: linear-gradient(135deg, #e63946, #c1121f); color: white; padding: 16px 18px 14px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 50; }
+.header h1 { font-size: 1.15rem; font-weight: 700; }
+.header span { font-size: 0.78rem; opacity: 0.85; }
+.header-right { display: flex; align-items: center; gap: 8px; }
+.sync-indicator { font-size: 0.75rem; opacity: 0.85; }
+.sync-indicator.syncing { animation: pulse 1s infinite; }
+@keyframes pulse { 0%,100%{opacity:0.5} 50%{opacity:1} }
+
+.search-bar { padding: 12px 14px; background: white; border-bottom: 1px solid #e8eaf0; }
+.search-bar input { width: 100%; padding: 10px 14px; border: 1.5px solid #dde1f0; border-radius: 10px; font-size: 1rem; outline: none; }
+
+.filters { display: flex; gap: 8px; padding: 10px 14px; background: white; border-bottom: 1px solid #e8eaf0; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.filters::-webkit-scrollbar { display: none; }
+.filter-chip { white-space: nowrap; padding: 6px 14px; border: 1.5px solid #dde1f0; border-radius: 20px; font-size: 0.82rem; background: white; cursor: pointer; color: #555; }
+.filter-chip.active { background: #1a1a2e; color: white; border-color: #1a1a2e; }
+.filter-chip.marca-bimbo-chip { border-color: #ffc107; color: #856404; }
+.filter-chip.marca-bimbo-chip.active { background: #ffc107; color: #5a3e00; border-color: #ffc107; }
+.filter-chip.marca-brot-chip { border-color: #17a2b8; color: #0c5460; }
+.filter-chip.marca-brot-chip.active { background: #17a2b8; color: white; }
+
+.stats { display: flex; gap: 8px; padding: 12px 14px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.stats::-webkit-scrollbar { display: none; }
+.stat-card { background: white; border-radius: 10px; padding: 10px 14px; min-width: 70px; text-align: center; box-shadow: 0 1px 4px rgba(0,0,0,0.07); flex-shrink: 0; }
+.stat-card .num { font-size: 1.4rem; font-weight: 700; }
+.stat-card .lbl { font-size: 0.65rem; color: #888; margin-top: 2px; text-transform: uppercase; }
+.stat-card.s-caliente .num { color: #e63946; }
+.stat-card.s-tibio .num { color: #f4a261; }
+.stat-card.s-frio .num { color: #6c757d; }
+.stat-card.s-cliente .num { color: #2a9d8f; }
+
+/* CONFIG BANNER */
+.config-banner { background: #fff3cd; border-bottom: 2px solid #ffc107; padding: 12px 16px; font-size: 0.85rem; color: #856404; }
+.config-banner strong { display: block; margin-bottom: 4px; }
+.config-banner input { width: 100%; margin-top: 8px; padding: 9px 12px; border: 1.5px solid #ffc107; border-radius: 8px; font-size: 0.9rem; outline: none; font-family: inherit; }
+.btn-connect { margin-top: 8px; width: 100%; padding: 10px; background: #e63946; color: white; border: none; border-radius: 8px; font-weight: 700; font-size: 0.9rem; cursor: pointer; }
+
+.cards { padding: 10px 14px; display: flex; flex-direction: column; gap: 10px; }
+.card { background: white; border-radius: 14px; padding: 14px 16px; box-shadow: 0 1px 5px rgba(0,0,0,0.08); }
+.card-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+.card-name { font-size: 1rem; font-weight: 700; }
+.card-tipo { font-size: 0.72rem; color: #999; margin-top: 2px; }
+.card-badges { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 6px; }
+.card-actions { display: flex; gap: 8px; margin-top: 10px; border-top: 1px solid #f0f2f8; padding-top: 10px; }
+.act-btn { flex: 1; padding: 9px 6px; border-radius: 9px; border: none; font-size: 0.8rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; text-decoration: none; }
+.act-btn.wa    { background: #25D366; color: white; }
+.act-btn.promo { background: #f0fdf4; color: #15803d; border: 1.5px solid #bbf7d0; }
+.act-btn.edit  { background: #f4f6fb; color: #444; border: 1.5px solid #e0e4f0; }
+.act-btn.del   { background: #fff5f5; color: #c1121f; border: 1.5px solid #fde8ea; }
+.card-dir { font-size: 0.8rem; color: #4a90d9; text-decoration: none; display: flex; align-items: center; gap: 4px; margin-bottom: 6px; }
+
+.badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; }
+.badge.frio     { background: #e9ecef; color: #6c757d; }
+.badge.tibio    { background: #fde8d0; color: #e07b39; }
+.badge.caliente { background: #fde8ea; color: #c1121f; }
+.badge.cliente  { background: #d4f1ee; color: #1a7a6e; }
+.marca-tag { display: inline-block; padding: 2px 7px; border-radius: 5px; font-size: 0.72rem; font-weight: 700; margin: 1px; }
+.marca-bimbo { background: #fff3cd; color: #856404; border: 1px solid #ffc107; }
+.marca-brot  { background: #d1ecf1; color: #0c5460; border: 1px solid #17a2b8; }
+
+.empty-state { text-align: center; padding: 50px 20px; color: #bbb; font-size: 0.95rem; }
+.fab { position: fixed; bottom: 24px; right: 20px; width: 58px; height: 58px; border-radius: 50%; background: #e63946; color: white; border: none; font-size: 1.8rem; box-shadow: 0 4px 16px rgba(230,57,70,0.45); cursor: pointer; z-index: 60; display: flex; align-items: center; justify-content: center; }
+
+/* MODALES */
+.overlay, .promo-overlay, .edit-promo-overlay {
+  display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(0,0,0,0.5); z-index: 100; align-items: flex-end; justify-content: center;
+}
+.overlay.active, .promo-overlay.active, .edit-promo-overlay.active { display: flex; }
+.promo-overlay { z-index: 200; }
+.edit-promo-overlay { z-index: 300; }
+
+.modal, .promo-modal, .edit-promo-modal {
+  background: white; border-radius: 20px 20px 0 0; padding: 20px 18px 34px;
+  width: 100%; max-height: 92vh; overflow-y: auto;
+}
+.modal-handle { width: 40px; height: 4px; background: #dde1f0; border-radius: 4px; margin: 0 auto 16px; }
+.modal h2, .promo-modal h2, .edit-promo-modal h2 { font-size: 1.05rem; margin-bottom: 14px; }
+.promo-modal .sub { font-size: 0.82rem; color: #888; margin-bottom: 14px; margin-top: -10px; }
+
+.form-group { margin-bottom: 14px; }
+.form-group label { display: block; font-size: 0.82rem; color: #555; margin-bottom: 5px; font-weight: 600; }
+.form-group input, .form-group select, .form-group textarea { width: 100%; padding: 12px 14px; border: 1.5px solid #dde1f0; border-radius: 10px; font-size: 1rem; outline: none; font-family: inherit; }
+.form-group textarea { resize: vertical; min-height: 80px; }
+.marcas-check { display: flex; gap: 12px; margin-top: 8px; }
+.marcas-check label { display: flex; align-items: center; gap: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; padding: 10px 16px; border: 1.5px solid #dde1f0; border-radius: 10px; flex: 1; justify-content: center; }
+.marcas-check input[type=checkbox] { width: 18px; height: 18px; accent-color: #e63946; }
+.lbl-bimbo { color: #856404; }
+.lbl-brot  { color: #0c5460; }
+.modal-actions, .ep-actions { display: flex; gap: 10px; margin-top: 18px; }
+.btn-cancel { flex: 1; padding: 13px; border: 1.5px solid #dde1f0; background: white; border-radius: 10px; cursor: pointer; font-size: 1rem; }
+.btn-save   { flex: 2; padding: 13px; background: #e63946; color: white; border: none; border-radius: 10px; font-weight: 700; cursor: pointer; font-size: 1rem; }
+
+.promo-card { border: 1.5px solid #e8eaf0; border-radius: 12px; padding: 14px 14px 46px; margin-bottom: 10px; cursor: pointer; position: relative; }
+.promo-card.selected { border-color: #25D366; background: #f0fdf4; }
+.promo-card .promo-title { font-weight: 700; font-size: 0.9rem; margin-bottom: 5px; }
+.promo-card .promo-body  { font-size: 0.82rem; color: #555; line-height: 1.5; }
+.promo-card .promo-marca { font-size: 0.72rem; font-weight: 700; padding: 2px 7px; border-radius: 5px; position: absolute; top: 10px; right: 10px; }
+.promo-edit-btn { position: absolute; bottom: 10px; right: 10px; background: none; border: 1px solid #dde1f0; border-radius: 6px; padding: 5px 12px; font-size: 0.8rem; cursor: pointer; color: #666; }
+.promo-del-btn  { position: absolute; bottom: 10px; right: 80px; background: none; border: 1px solid #fde8ea; border-radius: 6px; padding: 5px 12px; font-size: 0.8rem; cursor: pointer; color: #c1121f; }
+.custom-msg { width: 100%; padding: 12px 14px; border: 1.5px solid #dde1f0; border-radius: 10px; font-size: 0.95rem; font-family: inherit; resize: vertical; min-height: 100px; outline: none; margin-top: 6px; }
+.btn-wa { background: #25D366; color: white; border: none; padding: 14px; border-radius: 12px; font-size: 1rem; font-weight: 700; cursor: pointer; width: 100%; margin-top: 14px; display: flex; align-items: center; justify-content: center; gap: 8px; }
+.btn-wa:disabled { background: #a8d5b8; cursor: not-allowed; }
+.btn-new-promo { width: 100%; padding: 12px; border: 1.5px dashed #25D366; background: #f0fdf4; color: #15803d; border-radius: 12px; font-size: 0.92rem; font-weight: 600; cursor: pointer; margin-top: 6px; }
+.no-phone-warn { background: #fff3cd; border: 1px solid #ffc107; border-radius: 10px; padding: 10px 14px; font-size: 0.83rem; color: #856404; margin-bottom: 12px; }
+.ep-group { margin-bottom: 12px; }
+.ep-group label { display: block; font-size: 0.82rem; font-weight: 600; color: #555; margin-bottom: 5px; }
+.ep-group input, .ep-group select, .ep-group textarea { width: 100%; padding: 12px 14px; border: 1.5px solid #dde1f0; border-radius: 10px; font-size: 1rem; font-family: inherit; outline: none; }
+.ep-group textarea { resize: vertical; min-height: 120px; }
+
+/* DESKTOP */
+@media (min-width: 700px) {
+  body { max-width: 800px; margin: 0 auto; padding-bottom: 40px; }
+  .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .fab { right: calc(50% - 380px); }
+  .modal, .promo-modal, .edit-promo-modal { border-radius: 14px; max-width: 500px; margin: auto; align-self: center; }
+  .overlay, .promo-overlay, .edit-promo-overlay { align-items: center; }
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <h1>🥐 Snack Fest CRM</h1>
+    <span>Clientes y leads</span>
+  </div>
+  <div class="header-right">
+    <span class="sync-indicator" id="syncIndicator">☁️</span>
+  </div>
+</div>
+
+<div id="configBanner" class="config-banner">
+  <strong>⚙️ Conectá con Google Sheets para guardar en la nube</strong>
+  Pegá la URL de tu Apps Script y tocá Conectar.
+  <input id="scriptUrlInput" type="text" placeholder="https://script.google.com/macros/s/...">
+  <button class="btn-connect" onclick="conectar()">Conectar</button>
+</div>
+
+<div class="search-bar">
+  <input type="text" id="searchInput" placeholder="🔍 Buscar nombre, teléfono, dirección..." oninput="render()">
+</div>
+
+<div class="filters">
+  <span class="filter-chip active" data-type="estado" data-val="" onclick="setFilter(this)">Todos</span>
+  <span class="filter-chip" data-type="estado" data-val="caliente" onclick="setFilter(this)">🔥 Caliente</span>
+  <span class="filter-chip" data-type="estado" data-val="tibio" onclick="setFilter(this)">🌡️ Tibio</span>
+  <span class="filter-chip" data-type="estado" data-val="frio" onclick="setFilter(this)">❄️ Frío</span>
+  <span class="filter-chip" data-type="estado" data-val="cliente" onclick="setFilter(this)">✅ Cliente</span>
+  <span class="filter-chip marca-bimbo-chip" data-type="marca" data-val="BIMBO" onclick="setFilter(this)">🟡 BIMBO</span>
+  <span class="filter-chip marca-brot-chip"  data-type="marca" data-val="BROT"  onclick="setFilter(this)">🔵 BROT</span>
+</div>
+
+<div class="stats" id="stats"></div>
+<div class="cards" id="cards"></div>
+<button class="fab" onclick="openModal()">+</button>
+
+<!-- Modal contacto -->
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <h2 id="modalTitle">Nuevo contacto</h2>
+    <div class="form-group"><label>Nombre / Negocio *</label><input id="fNombre" type="text" placeholder="Ej: Kiosco El Sol"></div>
+    <div class="form-group"><label>Dirección</label><input id="fDireccion" type="text" placeholder="Ej: Av. Colón 123"></div>
+    <div class="form-group"><label>Teléfono / WhatsApp</label><input id="fTelefono" type="tel" placeholder="Ej: 3512000000"></div>
+    <div class="form-group">
+      <label>Marcas que trabaja</label>
+      <div class="marcas-check">
+        <label><input type="checkbox" id="fBimbo"> <span class="lbl-bimbo">🟡 BIMBO</span></label>
+        <label><input type="checkbox" id="fBrot">  <span class="lbl-brot">🔵 BROT</span></label>
+      </div>
+    </div>
+    <div class="form-group"><label>Tipo de local</label>
+      <select id="fTipo">
+        <option value="">Sin especificar</option>
+        <option value="Kiosco">Kiosco</option>
+        <option value="Almacen">Almacén</option>
+        <option value="Autoservicio">Autoservicio</option>
+        <option value="Gastronomico">Gastronómico</option>
+        <option value="Drugstore">Drugstore</option>
+        <option value="Otro">Otro</option>
+      </select>
+    </div>
+    <div class="form-group"><label>Estado</label>
+      <select id="fEstado">
+        <option value="frio">❄️ Frío</option>
+        <option value="tibio">🌡️ Tibio</option>
+        <option value="caliente">🔥 Caliente</option>
+        <option value="cliente">✅ Cliente</option>
+      </select>
+    </div>
+    <div class="form-group"><label>Canal de origen</label>
+      <select id="fCanal">
+        <option value="Instagram">Instagram</option>
+        <option value="Tiendanube">Tiendanube</option>
+        <option value="WhatsApp">WhatsApp</option>
+        <option value="Boca a boca">Boca a boca</option>
+        <option value="Otro">Otro</option>
+      </select>
+    </div>
+    <div class="form-group"><label>Último contacto</label><input id="fFecha" type="date"></div>
+    <div class="form-group"><label>Notas</label><textarea id="fNotas" placeholder="Observaciones..."></textarea></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal()">Cancelar</button>
+      <button class="btn-save" onclick="saveContact()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Promos -->
+<div class="promo-overlay" id="promoOverlay">
+  <div class="promo-modal">
+    <div class="modal-handle"></div>
+    <h2>📣 Enviar promo</h2>
+    <p class="sub" id="promoSubtitle"></p>
+    <div id="noPhoneWarn" class="no-phone-warn" style="display:none;">⚠️ Sin teléfono cargado. Editá el contacto primero.</div>
+    <div id="promoList"></div>
+    <div style="margin-top:14px;">
+      <label style="font-size:0.82rem;font-weight:600;color:#555;">✏️ Mensaje personalizado:</label>
+      <textarea class="custom-msg" id="customMsg" placeholder="Hola! Te escribimos desde Snack Fest..."></textarea>
+    </div>
+    <button class="btn-wa" id="btnEnviarWa" onclick="enviarPromo()">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.127.558 4.126 1.535 5.858L.057 23.571a.5.5 0 00.624.601l5.89-1.543A11.945 11.945 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.907 0-3.686-.518-5.21-1.418l-.374-.22-3.871 1.015 1.034-3.772-.242-.386A9.96 9.96 0 012 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/></svg>
+      Abrir WhatsApp
+    </button>
+    <button class="btn-cancel" style="width:100%;margin-top:10px;" onclick="closePromo()">Cancelar</button>
+  </div>
+</div>
+
+<!-- Modal Editar Promo -->
+<div class="edit-promo-overlay" id="editPromoOverlay">
+  <div class="edit-promo-modal">
+    <div class="modal-handle"></div>
+    <h2 id="editPromoTitle">✏️ Editar promo</h2>
+    <div class="ep-group"><label>Título</label><input id="epTitulo" type="text" placeholder="Ej: Promo semanal BIMBO"></div>
+    <div class="ep-group"><label>Marca</label>
+      <select id="epMarca">
+        <option value="">General</option>
+        <option value="BIMBO">BIMBO</option>
+        <option value="BROT">BROT</option>
+        <option value="AMBAS">BIMBO + BROT</option>
+      </select>
+    </div>
+    <div class="ep-group"><label>Mensaje (*negrita* para WhatsApp)</label><textarea id="epTexto" placeholder="Hola! 👋 Te escribimos desde *Snack Fest*..."></textarea></div>
+    <div class="ep-actions">
+      <button class="btn-cancel" onclick="closeEditPromo()">Cancelar</button>
+      <button class="btn-save" onclick="saveEditPromo()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+var SCRIPT_URL = localStorage.getItem("snackfest_script_url") || "";
+var WA_SVG = '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:middle;margin-right:3px;"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.127.558 4.126 1.535 5.858L.057 23.571a.5.5 0 00.624.601l5.89-1.543A11.945 11.945 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.907 0-3.686-.518-5.21-1.418l-.374-.22-3.871 1.015 1.034-3.772-.242-.386A9.96 9.96 0 012 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/></svg>';
+
+var contacts = JSON.parse(localStorage.getItem("snackfest_contacts") || "null") || [
+  { id:1,  nombre:"Mercato",             direccion:"Valparaiso",        telefono:"", marcas:["BIMBO"],        tipo:"Autoservicio", estado:"cliente", canal:"Otro", fecha:"2026-05-20", notas:"" },
+  { id:2,  nombre:"Almacen California",  direccion:"",                  telefono:"", marcas:["BIMBO","BROT"], tipo:"Almacen",      estado:"cliente", canal:"Otro", fecha:"2026-05-20", notas:"" },
+  { id:3,  nombre:"El Misionero",        direccion:"Universitario",     telefono:"", marcas:["BIMBO","BROT"], tipo:"Autoservicio", estado:"cliente", canal:"Otro", fecha:"2026-05-20", notas:"" },
+  { id:4,  nombre:"Kiosco",              direccion:"Universitario",     telefono:"", marcas:["BIMBO"],        tipo:"Almacen",      estado:"cliente", canal:"Otro", fecha:"2026-05-20", notas:"" },
+  { id:5,  nombre:"Fiambreria",          direccion:"Bv. Illia",         telefono:"", marcas:["BIMBO","BROT"], tipo:"Almacen",      estado:"cliente", canal:"Otro", fecha:"2026-05-20", notas:"" },
+  { id:6,  nombre:"Autoservicio",        direccion:"Nueva Cordoba",     telefono:"", marcas:["BIMBO"],        tipo:"Almacen",      estado:"cliente", canal:"Otro", fecha:"2026-05-20", notas:"" },
+  { id:7,  nombre:"Pizzeria",            direccion:"Vicor",             telefono:"", marcas:["BROT"],         tipo:"Gastronomico", estado:"cliente", canal:"Otro", fecha:"2026-05-20", notas:"" },
+  { id:8,  nombre:"Super AR",            direccion:"Lagunilla 3800",    telefono:"", marcas:["BIMBO"],        tipo:"Autoservicio", estado:"cliente", canal:"Otro", fecha:"2026-05-20", notas:"" },
+  { id:9,  nombre:"Kiosco Octavio Pinto",direccion:"Octavio Pinto",    telefono:"", marcas:["BROT"],         tipo:"Kiosco",       estado:"cliente", canal:"Otro", fecha:"2026-05-20", notas:"" },
+  { id:10, nombre:"Drugstore",           direccion:"20 de Junio",       telefono:"", marcas:["BIMBO","BROT"], tipo:"Almacen",      estado:"cliente", canal:"Otro", fecha:"2026-05-20", notas:"" },
+  { id:11, nombre:"Santa Cava",          direccion:"Armada Argentina",  telefono:"", marcas:["BIMBO"],        tipo:"Drugstore",    estado:"cliente", canal:"Otro", fecha:"2026-05-20", notas:"" },
+  { id:12, nombre:"Almacen",             direccion:"Ambrosio Olmos 668",telefono:"", marcas:["BIMBO"],        tipo:"Otro",         estado:"cliente", canal:"Otro", fecha:"2026-05-20", notas:"" },
+];
+var editingId = null;
+var nextId = Math.max.apply(null, contacts.map(function(c){return c.id;})) + 1;
+var activeFilters = { estado: "", marca: "" };
+
+var promos = JSON.parse(localStorage.getItem("snackfest_promos") || "null") || [
+  { id:"p1", titulo:"Promo semanal BIMBO", marca:"BIMBO", marcaCls:"marca-bimbo", texto:"Hola! 👋 Te escribimos desde *Snack Fest*.\n\n🔥 *PROMO DE LA SEMANA* 🔥\nProductos BIMBO con descuento especial para vos.\n\nConsultanos por cantidades y precios. ¡Stocks limitados! 🛒" },
+  { id:"p2", titulo:"Promo semanal BROT",  marca:"BROT",  marcaCls:"marca-brot",  texto:"Hola! 👋 Te escribimos desde *Snack Fest*.\n\n🔥 *PROMO DE LA SEMANA* 🔥\nProductos BROT con precio especial esta semana.\n\nConsultanos antes de que se agote el stock. 🛒" },
+  { id:"p3", titulo:"Combo BIMBO + BROT",  marca:"AMBAS", marcaCls:"",            texto:"Hola! 👋 Te contactamos desde *Snack Fest*.\n\n🎁 *COMBO ESPECIAL* — BIMBO + BROT\nLlevá productos de ambas marcas y accedé a un precio diferencial.\n\n¿Te interesa? ¡Avisanos y te armamos el pedido! 💪" },
+  { id:"p4", titulo:"Recordatorio de pedido", marca:"", marcaCls:"",             texto:"Hola! 👋 Somos *Snack Fest*.\n\nTe recordamos que podés hacer tu pedido esta semana. Tenemos todo el stock disponible.\n\n¿Renovamos? 😊" },
+];
+var promoContactId = null;
+var editingPromoId = null;
+var promoNextId = 5;
+
+// ---- SYNC ----
+function setSyncStatus(status) {
+  var el = document.getElementById("syncIndicator");
+  if (status === "syncing") { el.textContent = "🔄"; el.classList.add("syncing"); }
+  else if (status === "ok")  { el.textContent = "☁️✅"; el.classList.remove("syncing"); }
+  else if (status === "local"){ el.textContent = "💾"; el.classList.remove("syncing"); }
+  else if (status === "err") { el.textContent = "⚠️"; el.classList.remove("syncing"); }
+}
+
+function saveLocal() {
+  localStorage.setItem("snackfest_contacts", JSON.stringify(contacts));
+  localStorage.setItem("snackfest_promos",   JSON.stringify(promos));
+}
+
+function conectar() {
+  var url = document.getElementById("scriptUrlInput").value.trim();
+  if (!url.startsWith("https://script.google.com")) { alert("URL inválida. Debe empezar con https://script.google.com"); return; }
+  SCRIPT_URL = url;
+  localStorage.setItem("snackfest_script_url", url);
+  document.getElementById("configBanner").style.display = "none";
+  loadFromSheets();
+}
+
+function loadFromSheets() {
+  if (!SCRIPT_URL) { setSyncStatus("local"); return; }
+  setSyncStatus("syncing");
+  fetch(SCRIPT_URL + "?action=getAll")
+    .then(function(r){ return r.json(); })
+    .then(function(res) {
+      if (res.ok && res.data.length > 0) {
+        contacts = res.data.map(function(c) {
+          c.marcas = typeof c.marcas === "string" ? c.marcas.split(",").filter(Boolean) : (c.marcas||[]);
+          c.id = Number(c.id);
+          return c;
+        });
+        nextId = Math.max.apply(null, contacts.map(function(c){return c.id;})) + 1;
+        saveLocal();
+        render();
+      }
+      return fetch(SCRIPT_URL + "?action=getPromos");
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(res) {
+      if (res.ok && res.data.length > 0) {
+        promos = res.data;
+        saveLocal();
+      }
+      setSyncStatus("ok");
+    })
+    .catch(function(){ setSyncStatus("err"); });
+}
+
+function syncContact(contact) {
+  saveLocal();
+  if (!SCRIPT_URL) return;
+  setSyncStatus("syncing");
+  var payload = Object.assign({}, contact, { marcas: contact.marcas.join(","), action: "save" });
+  fetch(SCRIPT_URL, { method:"POST", body: JSON.stringify({ action:"save", contact: payload }) })
+    .then(function(){ setSyncStatus("ok"); })
+    .catch(function(){ setSyncStatus("err"); });
+}
+
+function syncDelete(id) {
+  saveLocal();
+  if (!SCRIPT_URL) return;
+  setSyncStatus("syncing");
+  fetch(SCRIPT_URL, { method:"POST", body: JSON.stringify({ action:"delete", id: id }) })
+    .then(function(){ setSyncStatus("ok"); })
+    .catch(function(){ setSyncStatus("err"); });
+}
+
+function syncPromos() {
+  saveLocal();
+  if (!SCRIPT_URL) return;
+  setSyncStatus("syncing");
+  fetch(SCRIPT_URL, { method:"POST", body: JSON.stringify({ action:"savePromos", promos: promos }) })
+    .then(function(){ setSyncStatus("ok"); })
+    .catch(function(){ setSyncStatus("err"); });
+}
+
+// ---- FILTROS ----
+function setFilter(chip) {
+  var type = chip.dataset.type, val = chip.dataset.val;
+  activeFilters[type] = activeFilters[type] === val ? "" : val;
+  document.querySelectorAll('[data-type="'+type+'"]').forEach(function(c){ c.classList.remove("active"); });
+  if (activeFilters[type]) chip.classList.add("active");
+  else document.querySelector('[data-type="'+type+'"][data-val=""]').classList.add("active");
+  render();
+}
+
+function marcasTags(marcas) {
+  if (!marcas||!marcas.length) return '';
+  return marcas.map(function(m){ return '<span class="marca-tag '+(m==="BIMBO"?"marca-bimbo":"marca-brot")+'">'+m+'</span>'; }).join("");
+}
+function estadoBadge(e) {
+  var lbl={frio:"❄️ Frío",tibio:"🌡️ Tibio",caliente:"🔥 Caliente",cliente:"✅ Cliente"};
+  return '<span class="badge '+e+'">'+(lbl[e]||e)+'</span>';
+}
+
+function render() {
+  var search = document.getElementById("searchInput").value.toLowerCase();
+  var filtered = contacts.filter(function(c) {
+    return (c.nombre.toLowerCase().includes(search)||c.telefono.includes(search)||(c.direccion||"").toLowerCase().includes(search)) &&
+           (!activeFilters.estado||c.estado===activeFilters.estado) &&
+           (!activeFilters.marca||(c.marcas&&c.marcas.indexOf(activeFilters.marca)!==-1));
+  });
+  var counts={frio:0,tibio:0,caliente:0,cliente:0};
+  contacts.forEach(function(c){ if(counts[c.estado]!==undefined) counts[c.estado]++; });
+  document.getElementById("stats").innerHTML =
+    '<div class="stat-card"><div class="num">'+contacts.length+'</div><div class="lbl">Total</div></div>'+
+    '<div class="stat-card s-caliente"><div class="num">'+counts.caliente+'</div><div class="lbl">🔥 Cal.</div></div>'+
+    '<div class="stat-card s-tibio"><div class="num">'+counts.tibio+'</div><div class="lbl">🌡️ Tib.</div></div>'+
+    '<div class="stat-card s-frio"><div class="num">'+counts.frio+'</div><div class="lbl">❄️ Frío</div></div>'+
+    '<div class="stat-card s-cliente"><div class="num">'+counts.cliente+'</div><div class="lbl">✅ Cli.</div></div>';
+  var cardsEl = document.getElementById("cards");
+  if (!filtered.length) { cardsEl.innerHTML='<div class="empty-state">Sin resultados.</div>'; return; }
+  cardsEl.innerHTML = filtered.map(function(c) {
+    var dir = c.direccion ? '<a class="card-dir" href="https://www.google.com/maps/search/'+encodeURIComponent(c.direccion+' Cordoba Argentina')+'" target="_blank">📍 '+c.direccion+'</a>' : '';
+    var waBtn = c.telefono
+      ? '<a class="act-btn wa" href="https://wa.me/54'+c.telefono+'" target="_blank">'+WA_SVG+c.telefono+'</a>'
+      : '<span class="act-btn wa" style="opacity:0.35;cursor:default;">'+WA_SVG+'Sin tel.</span>';
+    return '<div class="card">'+
+      '<div class="card-top"><div><div class="card-name">'+c.nombre+'</div>'+(c.tipo?'<div class="card-tipo">'+c.tipo+(c.canal&&c.canal!=="Otro"?' · '+c.canal:'')+'</div>':'')+'</div>'+estadoBadge(c.estado)+'</div>'+
+      dir+'<div class="card-badges">'+marcasTags(c.marcas)+'</div>'+
+      (c.notas?'<div style="font-size:0.8rem;color:#777;margin-top:2px;">📝 '+c.notas+'</div>':'')+
+      '<div class="card-actions">'+waBtn+
+      '<button class="act-btn promo" onclick="openPromo('+c.id+')">📣 Promo</button>'+
+      '<button class="act-btn edit" onclick="editContact('+c.id+')">✏️</button>'+
+      '<button class="act-btn del"  onclick="deleteContact('+c.id+')">🗑️</button>'+
+      '</div></div>';
+  }).join("");
+}
+
+// ---- CONTACTOS ----
+function openModal(reset) {
+  if (reset!==false) {
+    editingId=null;
+    document.getElementById("modalTitle").textContent="Nuevo contacto";
+    ["fNombre","fDireccion","fTelefono","fNotas"].forEach(function(id){document.getElementById(id).value="";});
+    document.getElementById("fBimbo").checked=false; document.getElementById("fBrot").checked=false;
+    document.getElementById("fTipo").value=""; document.getElementById("fEstado").value="frio";
+    document.getElementById("fCanal").value="Instagram";
+    document.getElementById("fFecha").value=new Date().toISOString().split("T")[0];
+  }
+  document.getElementById("overlay").classList.add("active");
+}
+function closeModal(){ document.getElementById("overlay").classList.remove("active"); }
+
+function editContact(id) {
+  var c=contacts.find(function(x){return x.id===id;}); if(!c) return;
+  editingId=id;
+  document.getElementById("modalTitle").textContent="Editar contacto";
+  document.getElementById("fNombre").value=c.nombre;
+  document.getElementById("fDireccion").value=c.direccion||"";
+  document.getElementById("fTelefono").value=c.telefono;
+  document.getElementById("fBimbo").checked=c.marcas&&c.marcas.indexOf("BIMBO")!==-1;
+  document.getElementById("fBrot").checked=c.marcas&&c.marcas.indexOf("BROT")!==-1;
+  document.getElementById("fTipo").value=c.tipo||"";
+  document.getElementById("fEstado").value=c.estado;
+  document.getElementById("fCanal").value=c.canal;
+  document.getElementById("fFecha").value=c.fecha;
+  document.getElementById("fNotas").value=c.notas||"";
+  openModal(false);
+}
+
+function saveContact() {
+  var nombre=document.getElementById("fNombre").value.trim();
+  if(!nombre){alert("El nombre es obligatorio.");return;}
+  var marcas=[];
+  if(document.getElementById("fBimbo").checked) marcas.push("BIMBO");
+  if(document.getElementById("fBrot").checked)  marcas.push("BROT");
+  var data={nombre:nombre,direccion:document.getElementById("fDireccion").value.trim(),
+    telefono:document.getElementById("fTelefono").value.trim(),marcas:marcas,
+    tipo:document.getElementById("fTipo").value,estado:document.getElementById("fEstado").value,
+    canal:document.getElementById("fCanal").value,fecha:document.getElementById("fFecha").value,
+    notas:document.getElementById("fNotas").value.trim()};
+  if(editingId){
+    var idx=contacts.findIndex(function(x){return x.id===editingId;});
+    contacts[idx]=Object.assign({id:editingId},data);
+    syncContact(contacts[idx]);
+  } else {
+    data.id=nextId++;
+    contacts.push(data);
+    syncContact(data);
+  }
+  closeModal(); render();
+}
+
+function deleteContact(id) {
+  if(!confirm("¿Eliminar este contacto?")) return;
+  contacts=contacts.filter(function(x){return x.id!==id;});
+  syncDelete(id); render();
+}
+
+// ---- PROMOS ----
+function marcaTagHtml(marca,marcaCls) {
+  if(!marca) return '';
+  if(marca==='AMBAS') return '<span class="promo-marca" style="background:#f0e6ff;color:#6f42c1;border:1px solid #b48ce0;">BIMBO+BROT</span>';
+  return '<span class="promo-marca '+marcaCls+'">'+marca+'</span>';
+}
+function renderPromoList(clientMarcas) {
+  document.getElementById("promoList").innerHTML = promos.map(function(p) {
+    var rel=p.marca===""||p.marca==="AMBAS"||clientMarcas.indexOf(p.marca)!==-1;
+    return '<div class="promo-card'+(rel?'":':'" style="opacity:0.5":')+' id="pc-'+p.id+'" onclick="selectPromo(\''+p.id+'\')">'+
+      marcaTagHtml(p.marca,p.marcaCls)+
+      '<div class="promo-title">'+p.titulo+'</div>'+
+      '<div class="promo-body">'+p.texto.replace(/\*/g,'').substring(0,100)+'...</div>'+
+      '<button class="promo-edit-btn" onclick="event.stopPropagation();openEditPromo(\''+p.id+'\')">✏️ Editar</button>'+
+      '<button class="promo-del-btn"  onclick="event.stopPropagation();deletePromo(\''+p.id+'\')">🗑️</button>'+
+    '</div>';
+  }).join("")+'<button class="btn-new-promo" onclick="openEditPromo(null)">+ Nueva promo</button>';
+}
+function openPromo(id) {
+  var c=contacts.find(function(x){return x.id===id;}); if(!c) return;
+  promoContactId=id;
+  document.getElementById("promoSubtitle").textContent="Para: "+c.nombre+(c.telefono?" · "+c.telefono:"");
+  document.getElementById("noPhoneWarn").style.display=c.telefono?"none":"block";
+  document.getElementById("btnEnviarWa").disabled=!c.telefono;
+  document.getElementById("customMsg").value="";
+  renderPromoList(c.marcas||[]);
+  document.getElementById("promoOverlay").classList.add("active");
+}
+function selectPromo(pid) {
+  document.querySelectorAll(".promo-card").forEach(function(el){el.classList.remove("selected");});
+  var el=document.getElementById("pc-"+pid); if(el) el.classList.add("selected");
+  var p=promos.find(function(x){return x.id===pid;}); if(p) document.getElementById("customMsg").value=p.texto;
+}
+function enviarPromo() {
+  var c=contacts.find(function(x){return x.id===promoContactId;});
+  if(!c||!c.telefono) return;
+  var msg=document.getElementById("customMsg").value.trim();
+  if(!msg){alert("Seleccioná o escribí un mensaje.");return;}
+  window.open("https://wa.me/54"+c.telefono+"?text="+encodeURIComponent(msg),"_blank");
+  closePromo();
+}
+function closePromo(){ document.getElementById("promoOverlay").classList.remove("active"); promoContactId=null; }
+
+function openEditPromo(pid) {
+  editingPromoId=pid;
+  if(pid){var p=promos.find(function(x){return x.id===pid;});
+    document.getElementById("editPromoTitle").textContent="✏️ Editar promo";
+    document.getElementById("epTitulo").value=p.titulo; document.getElementById("epMarca").value=p.marca; document.getElementById("epTexto").value=p.texto;
+  } else {
+    document.getElementById("editPromoTitle").textContent="➕ Nueva promo";
+    document.getElementById("epTitulo").value=""; document.getElementById("epMarca").value=""; document.getElementById("epTexto").value="";
+  }
+  document.getElementById("editPromoOverlay").classList.add("active");
+}
+function closeEditPromo(){ document.getElementById("editPromoOverlay").classList.remove("active"); editingPromoId=null; }
+function getMarcaCls(m){ return m==="BIMBO"?"marca-bimbo":m==="BROT"?"marca-brot":""; }
+function saveEditPromo() {
+  var titulo=document.getElementById("epTitulo").value.trim(), marca=document.getElementById("epMarca").value, texto=document.getElementById("epTexto").value.trim();
+  if(!titulo||!texto){alert("Título y mensaje son obligatorios.");return;}
+  if(editingPromoId){var idx=promos.findIndex(function(x){return x.id===editingPromoId;});promos[idx]={id:editingPromoId,titulo:titulo,marca:marca,marcaCls:getMarcaCls(marca),texto:texto};}
+  else promos.push({id:"p"+promoNextId++,titulo:titulo,marca:marca,marcaCls:getMarcaCls(marca),texto:texto});
+  closeEditPromo(); syncPromos();
+  if(document.getElementById("promoOverlay").classList.contains("active")&&promoContactId){
+    var c=contacts.find(function(x){return x.id===promoContactId;}); if(c) renderPromoList(c.marcas||[]);
+  }
+}
+function deletePromo(pid) {
+  if(promos.length<=1){alert("Tiene que quedar al menos una promo.");return;}
+  if(!confirm("¿Eliminar esta promo?")) return;
+  promos=promos.filter(function(x){return x.id!==pid;}); syncPromos();
+  if(promoContactId){var c=contacts.find(function(x){return x.id===promoContactId;});if(c)renderPromoList(c.marcas||[]);}
+}
+
+document.getElementById("overlay").addEventListener("click",function(e){if(e.target===this)closeModal();});
+document.getElementById("promoOverlay").addEventListener("click",function(e){if(e.target===this)closePromo();});
+document.getElementById("editPromoOverlay").addEventListener("click",function(e){if(e.target===this)closeEditPromo();});
+
+// Init
+document.getElementById("fFecha").value=new Date().toISOString().split("T")[0];
+if (SCRIPT_URL) {
+  document.getElementById("configBanner").style.display="none";
+  loadFromSheets();
+} else {
+  setSyncStatus("local");
+}
+render();
+</script>
+</body>
+</html>
