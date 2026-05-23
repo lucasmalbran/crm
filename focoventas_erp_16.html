@@ -1652,9 +1652,38 @@ function imprimirTicket(formato){
     '</body></html>';
   }
 
-  var win=window.open("","_blank","width="+(formato==="a4"?"800,height=700":"380,height=500"));
-  if(win){ win.document.write(ticketHTML); win.document.close(); }
-  else { showToast("⚠️ Habilitá los popups para imprimir"); }
+  // Subir a Google Drive si hay URL del ERP
+  if(ERP_SCRIPT_URL){
+    setSyncStatus("syncing");
+    var nombre = "Comprobante-"+numPedido+"-"+cli.nombre.replace(/\s+/g,"-")+"-"+p.fecha;
+    fetch(ERP_SCRIPT_URL, {
+      method:"POST",
+      body: JSON.stringify({action:"saveComprobante", html:ticketHTML, nombre:nombre})
+    })
+    .then(function(r){return r.json();})
+    .then(function(res){
+      setSyncStatus("ok");
+      if(res.ok && res.url){
+        window.open(res.url, "_blank");
+        showToast("📄 Comprobante guardado en Drive");
+      } else {
+        // Fallback a popup local
+        var win=window.open("","_blank","width="+(formato==="a4"?"800,height=700":"380,height=500"));
+        if(win){win.document.write(ticketHTML);win.document.close();}
+      }
+    })
+    .catch(function(){
+      setSyncStatus("error");
+      // Fallback a popup local
+      var win=window.open("","_blank","width="+(formato==="a4"?"800,height=700":"380,height=500"));
+      if(win){win.document.write(ticketHTML);win.document.close();}
+    });
+  } else {
+    // Sin Drive — abrir popup local
+    var win=window.open("","_blank","width="+(formato==="a4"?"800,height=700":"380,height=500"));
+    if(win){ win.document.write(ticketHTML); win.document.close(); }
+    else { showToast("⚠️ Habilitá los popups para imprimir"); }
+  }
 }
 
 // ===== STOCK =====
@@ -2304,36 +2333,6 @@ function diasSinVisitar(clienteId){
   var ultFecha = pedidosCli.map(function(p){return p.fecha;}).sort().reverse()[0];
   var diff = (new Date(hoyStr()) - new Date(ultFecha)) / (1000*60*60*24);
   return Math.round(diff);
-}
-
-function renderAlertas(){
-  // Función para la pantalla de rentabilidad
-  var DIAS=7;
-  var alertas=clientes.map(function(c){return{c:c,dias:diasSinVisitar(c.id)};})
-    .filter(function(a){return a.dias>=DIAS;}).sort(function(a,b){return b.dias-a.dias;});
-  var badge=document.getElementById("alertasBadge");
-  if(badge) badge.textContent=alertas.length;
-  var lista=document.getElementById("alertasLista");
-  if(!lista) return;
-  if(alertas.length===0){lista.innerHTML='<div class="empty" style="padding:20px;">✅ Todos los clientes fueron visitados esta semana</div>';return;}
-  lista.innerHTML=alertas.map(function(a){
-    var c=a.c;
-    var diasStr=a.dias===999?"Nunca":a.dias+" días";
-    var urgencia=a.dias>=14?"var(--red)":a.dias>=7?"var(--yellow)":"var(--muted)";
-    var pedidosCli=pedidos.filter(function(p){return p.clienteId===c.id&&!p.esPago&&p.total>0;});
-    var totalCli=pedidosCli.reduce(function(a,p){return a+p.total;},0);
-    return '<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 18px;border-bottom:1px solid var(--border);" onclick="abrirDetalleCliente('+c.id+')">'+
-      '<div style="display:flex;align-items:center;gap:10px;">'+
-        '<div style="width:42px;height:42px;border-radius:10px;background:rgba(255,255,255,0.04);border:1.5px solid '+urgencia+';display:flex;align-items:center;justify-content:center;flex-direction:column;">'+
-          '<span style="font-family:\'Syne\',sans-serif;font-weight:800;font-size:0.8rem;color:'+urgencia+';">'+diasStr+'</span>'+
-        '</div>'+
-        '<div><div style="font-weight:600;font-size:0.9rem;">'+c.nombre+'</div>'+
-        '<div style="font-size:0.72rem;color:var(--muted);margin-top:1px;">'+c.tipo+(c.dir?' · '+c.dir:'')+'</div>'+
-        '<div style="display:flex;gap:4px;margin-top:3px;">'+c.marcas.map(marcaTag).join("")+'</div></div>'+
-      '</div>'+
-      (c.tel?'<a href="https://wa.me/54'+c.tel+'" target="_blank" onclick="event.stopPropagation()" style="background:#25D366;color:white;border:none;border-radius:8px;padding:6px 10px;font-size:0.75rem;font-weight:700;text-decoration:none;flex-shrink:0;">📱 WA</a>':'')+
-    '</div>';
-  }).join("");
 }
 
 function renderAlertasAdmin(){
@@ -3559,15 +3558,17 @@ function imprimirCierrePDF(){
   '<br><button class="no-print" onclick="window.print()">Imprimir / Guardar PDF</button>'+
   '</body></html>';
 
-  var win=window.open("","_blank","width=800,height=700");
-  if(win){
-    win.document.write(html);
-    win.document.close();
-    setTimeout(function(){win.print();},500);
-  } else { showToast("⚠️ Habilitá los popups para guardar PDF"); }
-}
-
-// ===== CIERRE MENSUAL =====
+  if(ERP_SCRIPT_URL){
+    setSyncStatus("syncing");
+    var nombre="Cierre-Ruta-"+vendedores[0].nombre.replace(/\s+/g,"-")+"-"+hoyStr();
+    fetch(ERP_SCRIPT_URL,{method:"POST",body:JSON.stringify({action:"saveCierre",html:html,nombre:nombre})})
+    .then(function(r){return r.json();})
+    .then(function(res){
+      setSyncStatus("ok");
+      if(res.ok && res.url){ window.open(res.url,"_blank"); showToast("📄 Cierre guardado en Drive"); }
+      else { abrirVentanaPDF(html, 800, 700); }
+    }).catch(function(){ setSyncStatus("error"); abrirVentanaPDF(html, 800, 700); });
+  } else { abrirVentanaPDF(html, 800, 700); }
 function imprimirCierreMensualPDF(){
   var pp=getPedidosMes(0);
   var ppAnt=getPedidosMes(1);
@@ -3617,9 +3618,23 @@ function imprimirCierreMensualPDF(){
   '<br><button class="no-print" onclick="window.print()" style="padding:12px 20px;background:#d62b2b;color:white;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;margin-top:10px;">📄 Guardar como PDF</button>'+
   '</body></html>';
 
-  var win=window.open("","_blank","width=900,height=700");
+  if(ERP_SCRIPT_URL){
+    setSyncStatus("syncing");
+    var nombre="Cierre-Mensual-"+mesNombre.replace(/\s+/g,"-");
+    fetch(ERP_SCRIPT_URL,{method:"POST",body:JSON.stringify({action:"saveCierre",html:html,nombre:nombre})})
+    .then(function(r){return r.json();})
+    .then(function(res){
+      setSyncStatus("ok");
+      if(res.ok && res.url){ window.open(res.url,"_blank"); showToast("📄 Cierre mensual guardado en Drive"); }
+      else { abrirVentanaPDF(html, 900, 700); }
+    }).catch(function(){ setSyncStatus("error"); abrirVentanaPDF(html, 900, 700); });
+  } else { abrirVentanaPDF(html, 900, 700); }
+}
+
+function abrirVentanaPDF(html, w, h){
+  var win=window.open("","_blank","width="+w+",height="+h);
   if(win){win.document.write(html);win.document.close();setTimeout(function(){win.print();},500);}
-  else{showToast("⚠️ Habilitá los popups para guardar PDF");}
+  else{showToast("⚠️ Habilitá los popups");}
 }
 
 function getPedidosMes(offsetMeses){
@@ -4042,69 +4057,6 @@ window.addEventListener("resize", function(){
         <div><div style="font-family:'Syne',sans-serif;font-weight:700;font-size:1rem;">Ticket 58mm</div><div style="font-size:0.78rem;color:var(--muted);margin-top:2px;">Ticket compacto · Impresora térmica</div></div>
       </button>
       <button onclick="document.getElementById('ticketFormatoOverlay').classList.remove('active')" style="padding:12px;border-radius:12px;border:1.5px solid var(--border);background:none;color:var(--muted);font-size:0.9rem;cursor:pointer;">Cancelar</button>
-    </div>
-  </div>
-</div>
-
-<!-- MODAL CIERRE MENSUAL -->
-<div class="overlay" id="cierreMensualOverlay" style="z-index:350;">
-  <div class="sheet" style="max-height:95vh;">
-    <div class="sheet-handle"></div>
-    <div style="padding:0 18px 6px;display:flex;justify-content:space-between;align-items:center;">
-      <div>
-        <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:1.1rem;">📊 Cierre mensual</div>
-        <div style="font-size:0.78rem;color:var(--muted);margin-top:2px;" id="cierreMesLabel"></div>
-      </div>
-      <select id="cierreMesSelect" onchange="renderCierreMensual()" style="padding:7px 12px;background:var(--dark3);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:0.82rem;outline:none;"></select>
-    </div>
-
-    <!-- KPIs -->
-    <div style="display:flex;gap:8px;padding:14px 18px;flex-wrap:wrap;" id="cierreMesKpis"></div>
-
-    <!-- DESGLOSE -->
-    <div style="padding:0 18px 14px;" id="cierreMesDesglose"></div>
-
-    <!-- GASTOS -->
-    <div style="margin:0 18px 14px;background:var(--card);border-radius:12px;border:1px solid var(--border);overflow:hidden;">
-      <div style="padding:12px 14px;border-bottom:1px solid var(--border);">
-        <div style="font-family:'Syne',sans-serif;font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:10px;">🧾 Gastos del mes</div>
-        <div id="cierreMesGastos"></div>
-        <div style="display:flex;gap:8px;margin-top:10px;">
-          <input type="text" id="cierreMesGastoDesc" placeholder="Descripción" style="flex:1;padding:8px 10px;background:var(--dark3);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:0.85rem;outline:none;">
-          <input type="number" id="cierreMesGastoMonto" placeholder="$" style="width:80px;padding:8px 10px;background:var(--dark3);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:0.85rem;font-family:'Inter',sans-serif;font-weight:700;outline:none;">
-          <button onclick="agregarGastoMes()" style="padding:8px 12px;background:var(--red);color:white;border:none;border-radius:8px;font-weight:700;cursor:pointer;">+</button>
-        </div>
-      </div>
-      <div style="padding:12px 14px;display:flex;justify-content:space-between;align-items:center;background:rgba(230,57,70,0.05);">
-        <span style="font-size:0.85rem;color:var(--muted);">Total gastos</span>
-        <span style="font-family:'Inter',sans-serif;font-weight:800;font-size:1rem;color:var(--red);" id="cierreMesGastosTotal">$0</span>
-      </div>
-    </div>
-
-    <!-- RESULTADO NETO -->
-    <div style="margin:0 18px 14px;background:linear-gradient(135deg,rgba(46,194,126,0.1),rgba(46,194,126,0.05));border:1px solid rgba(46,194,126,0.2);border-radius:12px;padding:14px;">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-        <span style="font-size:0.85rem;color:var(--muted);">📈 Ganancia bruta</span>
-        <span style="font-family:'Inter',sans-serif;font-weight:800;color:var(--green);" id="cierreMesGanBruta">$0</span>
-      </div>
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-        <span style="font-size:0.85rem;color:var(--muted);">🧾 Gastos</span>
-        <span style="font-family:'Inter',sans-serif;font-weight:800;color:var(--red);" id="cierreMesGastosNeto">$0</span>
-      </div>
-      <div style="height:1px;background:rgba(46,194,126,0.2);margin:8px 0;"></div>
-      <div style="display:flex;justify-content:space-between;align-items:center;">
-        <span style="font-size:0.95rem;font-weight:700;">💰 Ganancia neta</span>
-        <span style="font-family:'Inter',sans-serif;font-weight:900;font-size:1.3rem;color:var(--green);" id="cierreMesNeta">$0</span>
-      </div>
-    </div>
-
-    <div style="padding:0 18px 10px;display:flex;gap:10px;flex-wrap:wrap;">
-      <button onclick="enviarCierreMensualWA()" style="flex:1;padding:13px;background:rgba(37,211,102,0.1);border:1.5px solid rgba(37,211,102,0.4);color:#25D366;border-radius:12px;font-size:0.9rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="#25D366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.127.558 4.126 1.535 5.858L.057 23.571a.5.5 0 00.624.601l5.89-1.543A11.945 11.945 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.907 0-3.686-.518-5.21-1.418l-.374-.22-3.871 1.015 1.034-3.772-.242-.386A9.96 9.96 0 012 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/></svg>
-        WhatsApp
-      </button>
-      <button onclick="imprimirCierreMensualPDF()" style="flex:1;padding:13px;background:rgba(26,115,232,0.1);border:1.5px solid rgba(26,115,232,0.4);color:#1a73e8;border-radius:12px;font-size:0.9rem;font-weight:700;cursor:pointer;">📄 PDF</button>
-      <button onclick="document.getElementById('cierreMensualOverlay').classList.remove('active')" style="flex:1;padding:13px;border:1.5px solid var(--border);background:none;color:var(--muted);border-radius:12px;font-size:0.9rem;cursor:pointer;">Cerrar</button>
     </div>
   </div>
 </div>
