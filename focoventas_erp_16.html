@@ -1077,12 +1077,21 @@ function saveLocal(){
 }
 
 function setSyncStatus(s){
-  var dot=document.getElementById("syncDot");
-  if(!dot) return;
-  if(s==="ok")     { dot.style.background="var(--green)"; dot.title="Sincronizado"; }
-  if(s==="syncing"){ dot.style.background="var(--yellow)"; dot.title="Sincronizando..."; }
-  if(s==="error")  { dot.style.background="var(--red)"; dot.title="Error de sync"; }
-  if(s==="local")  { dot.style.background="#555"; dot.title="Solo local"; }
+  var dots = [document.getElementById("syncDot"), document.getElementById("dsSyncDot")];
+  var txt = document.getElementById("dsSyncTxt");
+  dots.forEach(function(dot){
+    if(!dot) return;
+    if(s==="ok")     { dot.style.background="var(--green)"; dot.title="Sincronizado"; }
+    if(s==="syncing"){ dot.style.background="var(--yellow)"; dot.title="Sincronizando..."; }
+    if(s==="error")  { dot.style.background="var(--red)"; dot.title="Error de sync"; }
+    if(s==="local")  { dot.style.background="#555"; dot.title="Solo local"; }
+  });
+  if(txt){
+    if(s==="ok") txt.textContent="Sincronizado";
+    if(s==="syncing") txt.textContent="Conectando...";
+    if(s==="error") txt.textContent="Error de sync";
+    if(s==="local") txt.textContent="Solo local";
+  }
 }
 
 function conectarERP(){
