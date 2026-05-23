@@ -1572,7 +1572,13 @@ function imprimirTicket(formato){
     '</table>'+
     '<div class="cobro-box">💳 Forma de pago: <strong>'+(cobroLabel[p.cobro]||p.cobro)+'</strong>'+(p.cobro==="ctacte"?' — Queda pendiente de cobro':' — Pagado')+'</div>'+
     '<div class="footer">¡Gracias por su compra! · Foco Ventas · Hacé foco en lo importante: vender más.</div>'+
-    '<br><button class="no-print" onclick="window.print()" style="width:100%;padding:14px;background:#d62b2b;color:white;border:none;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer;margin-top:10px;">🖨️ Imprimir</button>'+
+    '<br>'+
+    '<div class="no-print" style="display:flex;gap:8px;margin-top:10px;">'+
+      '<button onclick="window.print()" style="flex:1;padding:14px;background:#d62b2b;color:white;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;">🖨️ Imprimir</button>'+
+      '<button onclick="guardarPDF()" style="flex:1;padding:14px;background:#1a73e8;color:white;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;">📄 Guardar PDF</button>'+
+    '</div>'+
+    '<script>function guardarPDF(){var opt=document.getElementById("pdfHint");if(opt){opt.style.display="block";}window.print();}<\/script>'+
+    '<div id="pdfHint" style="display:none;margin-top:8px;padding:10px;background:#e8f0fe;border-radius:8px;font-size:12px;color:#1a73e8;">💡 En el diálogo de impresión elegí <strong>"Guardar como PDF"</strong> como destino</div>'+
     '<button class="no-print" onclick="window.close()" style="width:100%;padding:10px;background:none;border:1px solid #ddd;border-radius:8px;font-size:13px;cursor:pointer;margin-top:8px;">Cerrar</button>'+
     '</body></html>';
 
@@ -1614,7 +1620,13 @@ function imprimirTicket(formato){
       (cobroLabel[p.cobro]||p.cobro)+
     '</div>'+
     '<div class="footer">¡Gracias por su compra!<br>Foco Ventas</div>'+
-    '<br><button class="no-print" onclick="window.print()" style="width:100%;padding:10px;background:#d62b2b;color:white;border:none;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer;">🖨️ Imprimir</button>'+
+    '<br>'+
+    '<div class="no-print" style="display:flex;gap:6px;margin-top:8px;">'+
+      '<button onclick="window.print()" style="flex:1;padding:10px;background:#d62b2b;color:white;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;">🖨️ Imprimir</button>'+
+      '<button onclick="guardarPDF()" style="flex:1;padding:10px;background:#1a73e8;color:white;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;">📄 PDF</button>'+
+    '</div>'+
+    '<script>function guardarPDF(){var opt=document.getElementById("pdfHint");if(opt){opt.style.display="block";}window.print();}<\/script>'+
+    '<div id="pdfHint" style="display:none;margin-top:6px;padding:8px;background:#e8f0fe;border-radius:6px;font-size:10px;color:#1a73e8;">💡 Elegí <strong>"Guardar como PDF"</strong> como destino</div>'+
     '<button class="no-print" onclick="window.close()" style="width:100%;padding:8px;background:none;border:1px solid #ddd;border-radius:6px;font-size:11px;cursor:pointer;margin-top:6px;">Cerrar</button>'+
     '</body></html>';
   }
@@ -3487,7 +3499,106 @@ function eliminarVendedor(){
   showToast("🗑️ Vendedor eliminado");
 }
 
+function imprimirCierrePDF(){
+  var misP=pedidos.filter(function(p){return p.fecha===hoyStr()&&p.vendedorId===1&&!p.esPago&&p.total>0;});
+  var efectivo=0,transferencia=0,ctacte=0,ganancia=0;
+  misP.forEach(function(p){if(p.cobro==="efectivo")efectivo+=p.total;else if(p.cobro==="transferencia")transferencia+=p.total;else ctacte+=p.total;ganancia+=p.ganancia||0;});
+  var totalVentas=efectivo+transferencia+ctacte;
+  var totalGastos=gastosHoy.reduce(function(a,g){return a+g.monto;},0);
+  var netoEfectivo=Math.max(0,efectivo-totalGastos);
+  var tRuta=calcTiempoRuta(1);
+
+  var html='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Cierre de Ruta '+hoyStr()+'</title>'+
+  '<style>@page{size:A4;margin:20mm 25mm;}body{font-family:Arial,sans-serif;color:#111;font-size:13px;}'+
+  'h1{font-size:22px;font-weight:900;margin:0 0 4px;}.sub{color:#888;font-size:12px;margin-bottom:20px;}'+
+  '.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;}'+
+  '.card{background:#f8f8f8;border-radius:8px;padding:14px;text-align:center;}'+
+  '.card .val{font-size:20px;font-weight:900;}.card .lbl{font-size:11px;color:#888;margin-top:4px;}'+
+  '.sec{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#888;margin:16px 0 8px;}'+
+  'table{width:100%;border-collapse:collapse;}.tr{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #eee;}'+
+  '.total-box{background:#111;color:white;border-radius:8px;padding:14px;display:flex;justify-content:space-between;margin-top:12px;}'+
+  '.no-print{display:none;}@media print{.no-print{display:none!important;}}'+
+  '</style></head><body>'+
+  '<h1>🏁 Cierre de Ruta</h1>'+
+  '<div class="sub">'+vendedores[0].nombre+' · '+hoyStr()+(tRuta?' · ⏱️ '+tRuta.texto:'')+'</div>'+
+  '<div class="grid">'+
+    '<div class="card"><div class="val" style="color:#16a34a;">'+peso(totalVentas)+'</div><div class="lbl">Total vendido</div></div>'+
+    '<div class="card"><div class="val" style="color:#2563eb;">'+peso(ganancia)+'</div><div class="lbl">Ganancia</div></div>'+
+    '<div class="card"><div class="val">'+misP.length+'</div><div class="lbl">Pedidos</div></div>'+
+    '<div class="card"><div class="val" style="color:#dc2626;">'+peso(totalGastos)+'</div><div class="lbl">Gastos</div></div>'+
+  '</div>'+
+  '<div class="sec">Desglose de cobros</div>'+
+  '<div class="tr"><span>💵 Efectivo</span><strong>'+peso(efectivo)+'</strong></div>'+
+  '<div class="tr"><span>📲 Transferencia</span><strong>'+peso(transferencia)+'</strong></div>'+
+  '<div class="tr"><span>📒 Cuenta Corriente</span><strong>'+peso(ctacte)+'</strong></div>'+
+  (gastosHoy.length>0?'<div class="sec">Gastos del día</div>'+gastosHoy.map(function(g){return '<div class="tr"><span>'+g.desc+'</span><strong>'+peso(g.monto)+'</strong></div>';}).join(""):'')+
+  '<div class="total-box"><span style="font-weight:700;">💵 Efectivo a rendir</span><strong>'+peso(netoEfectivo)+'</strong></div>'+
+  '<br><button class="no-print" onclick="window.print()">Imprimir / Guardar PDF</button>'+
+  '</body></html>';
+
+  var win=window.open("","_blank","width=800,height=700");
+  if(win){
+    win.document.write(html);
+    win.document.close();
+    setTimeout(function(){win.print();},500);
+  } else { showToast("⚠️ Habilitá los popups para guardar PDF"); }
+}
+
 // ===== CIERRE MENSUAL =====
+function imprimirCierreMensualPDF(){
+  var pp=getPedidosMes(0);
+  var ppAnt=getPedidosMes(1);
+  var mesNombre=getNombreMes(0);
+  var totalV=pp.reduce(function(a,p){return a+p.total;},0);
+  var totalG=pp.reduce(function(a,p){return a+(p.ganancia||0);},0);
+  var ef=0,tr=0,cc=0;
+  pp.forEach(function(p){if(p.cobro==="efectivo")ef+=p.total;else if(p.cobro==="transferencia")tr+=p.total;else cc+=p.total;});
+  var vAnt=ppAnt.reduce(function(a,p){return a+p.total;},0);
+  var varV=vAnt>0?Math.round((totalV-vAnt)/vAnt*100):null;
+
+  // Top 5 productos
+  var pm={};
+  pp.forEach(function(p){Object.keys(p.items).forEach(function(id){var q=p.items[id];if(!q)return;var prod=productos.find(function(x){return x.id===parseInt(id);});if(!prod)return;if(!pm[id])pm[id]={nombre:prod.nombre,qty:0,g:0};pm[id].qty+=q;pm[id].g+=(prod.precio-prod.costo)*q;});});
+  var top5=Object.values(pm).sort(function(a,b){return b.g-a.g;}).slice(0,5);
+
+  var html='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Cierre Mensual '+mesNombre+'</title>'+
+  '<style>@page{size:A4;margin:20mm 25mm;}body{font-family:Arial,sans-serif;color:#111;font-size:13px;}'+
+  'h1{font-size:24px;font-weight:900;margin:0 0 4px;color:#d62b2b;}.sub{color:#888;font-size:12px;margin-bottom:20px;}'+
+  '.grid{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;margin-bottom:20px;}'+
+  '.card{background:#f8f8f8;border-radius:8px;padding:12px;text-align:center;border-top:3px solid #d62b2b;}'+
+  '.card .val{font-size:18px;font-weight:900;color:#d62b2b;}.card .lbl{font-size:10px;color:#888;margin-top:3px;text-transform:uppercase;}'+
+  '.sec{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#888;margin:16px 0 8px;border-bottom:1px solid #eee;padding-bottom:4px;}'+
+  '.row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #f0f0f0;font-size:13px;}'+
+  '.var-pos{color:#16a34a;font-weight:700;}.var-neg{color:#dc2626;font-weight:700;}'+
+  '.footer{text-align:center;font-size:10px;color:#aaa;margin-top:20px;padding-top:12px;border-top:1px solid #eee;}'+
+  '@media print{.no-print{display:none!important;}}'+
+  '</style></head><body>'+
+  '<h1>Cierre Mensual</h1>'+
+  '<div class="sub">'+mesNombre+(varV!==null?' · <span class="'+(varV>=0?"var-pos":"var-neg")+'">'+(varV>=0?"▲":"▼")+Math.abs(varV)+'% vs mes anterior</span>':'')+'</div>'+
+  '<div class="grid">'+
+    '<div class="card"><div class="val">'+peso(totalV)+'</div><div class="lbl">Total vendido</div></div>'+
+    '<div class="card"><div class="val">'+peso(totalG)+'</div><div class="lbl">Ganancia</div></div>'+
+    '<div class="card"><div class="val">'+pp.length+'</div><div class="lbl">Pedidos</div></div>'+
+    '<div class="card"><div class="val">'+(totalV>0?Math.round(totalG/totalV*100):0)+'%</div><div class="lbl">Margen</div></div>'+
+  '</div>'+
+  '<div class="sec">Desglose de cobros</div>'+
+  '<div class="row"><span>💵 Efectivo</span><strong>'+peso(ef)+'</strong></div>'+
+  '<div class="row"><span>📲 Transferencia</span><strong>'+peso(tr)+'</strong></div>'+
+  '<div class="row"><span>📒 Cuenta Corriente</span><strong>'+peso(cc)+'</strong></div>'+
+  '<div class="sec">Top 5 productos más rentables</div>'+
+  top5.map(function(d,i){return '<div class="row"><span>#'+(i+1)+' '+d.nombre+' <small style="color:#888;">x'+d.qty+'</small></span><strong>'+peso(d.g)+'</strong></div>';}).join("")+
+  '<div class="sec">Comparativa mes anterior ('+getNombreMes(1)+')</div>'+
+  '<div class="row"><span>Ventas mes anterior</span><strong>'+peso(vAnt)+'</strong></div>'+
+  '<div class="row"><span>Variación</span><strong class="'+(varV!==null?(varV>=0?"var-pos":"var-neg"):"")+'">'+(varV!==null?(varV>=0?"▲":"▼")+Math.abs(varV)+"%":"—")+'</strong></div>'+
+  '<div class="footer">Foco Ventas · Hacé foco en lo importante: vender más. · Generado el '+new Date().toLocaleDateString("es-AR")+'</div>'+
+  '<br><button class="no-print" onclick="window.print()" style="padding:12px 20px;background:#d62b2b;color:white;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;margin-top:10px;">📄 Guardar como PDF</button>'+
+  '</body></html>';
+
+  var win=window.open("","_blank","width=900,height=700");
+  if(win){win.document.write(html);win.document.close();setTimeout(function(){win.print();},500);}
+  else{showToast("⚠️ Habilitá los popups para guardar PDF");}
+}
+
 function getPedidosMes(offsetMeses){
   var now=new Date();
   var y=now.getFullYear(), m=now.getMonth()-offsetMeses;
@@ -3856,8 +3967,9 @@ window.addEventListener("resize", function(){
     <div style="padding:14px 18px;display:flex;flex-direction:column;gap:10px;">
       <button onclick="enviarCierreWA()" style="padding:13px;border-radius:12px;background:rgba(37,211,102,0.1);border:1.5px solid rgba(37,211,102,0.4);color:#25D366;font-size:0.95rem;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;display:flex;align-items:center;justify-content:center;gap:8px;">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="#25D366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.127.558 4.126 1.535 5.858L.057 23.571a.5.5 0 00.624.601l5.89-1.543A11.945 11.945 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.907 0-3.686-.518-5.21-1.418l-.374-.22-3.871 1.015 1.034-3.772-.242-.386A9.96 9.96 0 012 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/></svg>
-        Enviar cierre al admin por WhatsApp
+        Enviar por WhatsApp
       </button>
+      <button onclick="imprimirCierrePDF()" style="padding:13px;border-radius:12px;background:rgba(26,115,232,0.1);border:1.5px solid rgba(26,115,232,0.4);color:#1a73e8;font-size:0.95rem;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;display:flex;align-items:center;justify-content:center;gap:8px;">📄 Guardar como PDF</button>
       <button onclick="document.getElementById('cierreOverlay').classList.remove('active')" style="padding:13px;border-radius:12px;border:1.5px solid var(--border);background:none;color:var(--muted);font-size:0.9rem;cursor:pointer;font-family:'DM Sans',sans-serif;">Cerrar</button>
     </div>
   </div>
@@ -3963,11 +4075,12 @@ window.addEventListener("resize", function(){
       </div>
     </div>
 
-    <div style="padding:0 18px 10px;display:flex;gap:10px;">
+    <div style="padding:0 18px 10px;display:flex;gap:10px;flex-wrap:wrap;">
       <button onclick="enviarCierreMensualWA()" style="flex:1;padding:13px;background:rgba(37,211,102,0.1);border:1.5px solid rgba(37,211,102,0.4);color:#25D366;border-radius:12px;font-size:0.9rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="#25D366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.127.558 4.126 1.535 5.858L.057 23.571a.5.5 0 00.624.601l5.89-1.543A11.945 11.945 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.907 0-3.686-.518-5.21-1.418l-.374-.22-3.871 1.015 1.034-3.772-.242-.386A9.96 9.96 0 012 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/></svg>
-        Enviar resumen
+        WhatsApp
       </button>
+      <button onclick="imprimirCierreMensualPDF()" style="flex:1;padding:13px;background:rgba(26,115,232,0.1);border:1.5px solid rgba(26,115,232,0.4);color:#1a73e8;border-radius:12px;font-size:0.9rem;font-weight:700;cursor:pointer;">📄 PDF</button>
       <button onclick="document.getElementById('cierreMensualOverlay').classList.remove('active')" style="flex:1;padding:13px;border:1.5px solid var(--border);background:none;color:var(--muted);border-radius:12px;font-size:0.9rem;cursor:pointer;">Cerrar</button>
     </div>
   </div>
