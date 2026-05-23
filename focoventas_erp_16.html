@@ -1068,7 +1068,17 @@ var marcaFilterActual = "";
 var vendedores = [{id:1,nombre:"Lucas Ojeda",color:"var(--green)"},{id:2,nombre:"Vendedor 2",color:"var(--blue)"}];
 
 // ===== GOOGLE SHEETS SYNC =====
-var ERP_SCRIPT_URL = localStorage.getItem("fv_erp_url") || "https://script.google.com/macros/s/AKfycbzgkYQJIdEZXxxCK097w1lDEQI9cti9dA2HRYTSEiGaVOG8cTRN4_vH_Dg8Ys1859MHSg/exec";
+// Forzar migración de URL vieja a nueva si corresponde
+(function(){
+  var URL_VIEJA = "AKfycbzgkYQJIdEZXxxCK097w1lDEQI9cti9dA2HRYTSEiGaVOG8cTRN4_vH_Dg8Ys1859MHSg";
+  var URL_NUEVA = "https://script.google.com/macros/s/AKfycbwZHPptJAnDNs3tSnR7w1YFrO7Zy1f6Xpx1jZTwlyReTrO5j2Og_HPokxnxmaZEkMVd1w/exec";
+  var guardada = localStorage.getItem("fv_erp_url") || "";
+  if(guardada.indexOf(URL_VIEJA) !== -1){
+    localStorage.setItem("fv_erp_url", URL_NUEVA);
+  }
+})();
+
+var ERP_SCRIPT_URL = localStorage.getItem("fv_erp_url") || "https://script.google.com/macros/s/AKfycbwZHPptJAnDNs3tSnR7w1YFrO7Zy1f6Xpx1jZTwlyReTrO5j2Og_HPokxnxmaZEkMVd1w/exec";
 
 function saveLocal(){
   localStorage.setItem("sf_clientes", JSON.stringify(clientes));
