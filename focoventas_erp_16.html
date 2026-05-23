@@ -305,7 +305,7 @@ h1,h2,h3,.syne{font-family:'Syne',sans-serif;}
 .toast.show{opacity:1;}
 </style>
 <style>
-.pin-btn{padding:18px;background:var(--card);border:1.5px solid var(--border);border-radius:14px;color:var(--text);font-family:'Syne',sans-serif;font-size:1.3rem;font-weight:700;cursor:pointer;transition:background 0.1s;}
+.pin-btn{padding:18px;background:var(--card);border:1.5px solid var(--border);border-radius:14px;color:var(--text);font-family:'Syne',sans-serif;font-size:1.3rem;font-weight:700;cursor:pointer;transition:background 0.1s;-webkit-tap-highlight-color:rgba(0,0,0,0);user-select:none;touch-action:manipulation;}
 .pin-btn:active{background:var(--red);border-color:var(--red);color:white;}
 </style>
 </head>
@@ -321,11 +321,11 @@ h1,h2,h3,.syne{font-family:'Syne',sans-serif;}
   <div id="loginStep1" style="width:100%;max-width:320px;">
     <div style="font-size:0.72rem;color:var(--muted);text-align:center;margin-bottom:14px;text-transform:uppercase;letter-spacing:1px;font-weight:700;">¿Quién sos?</div>
     <div style="display:flex;flex-direction:column;gap:10px;">
-      <button onclick="elegirUsuario('admin')" style="padding:16px;background:var(--card);border:1.5px solid var(--border);border-radius:14px;color:var(--text);font-size:1rem;font-weight:700;cursor:pointer;font-family:'Syne',sans-serif;display:flex;align-items:center;gap:12px;">
+      <button onclick="elegirUsuario('admin')" ontouchend="event.preventDefault();elegirUsuario('admin')" style="padding:16px;background:var(--card);border:1.5px solid var(--border);border-radius:14px;color:var(--text);font-size:1rem;font-weight:700;cursor:pointer;font-family:'Syne',sans-serif;display:flex;align-items:center;gap:12px;-webkit-tap-highlight-color:rgba(0,0,0,0);user-select:none;">
         <span style="font-size:1.5rem;">👑</span>
         <div style="text-align:left;"><div>Lucas Malbrán</div><div style="font-size:0.72rem;color:var(--muted);font-weight:400;margin-top:2px;">Administrador</div></div>
       </button>
-      <button onclick="elegirUsuario('ojeda')" style="padding:16px;background:var(--card);border:1.5px solid var(--border);border-radius:14px;color:var(--text);font-size:1rem;font-weight:700;cursor:pointer;font-family:'Syne',sans-serif;display:flex;align-items:center;gap:12px;">
+      <button onclick="elegirUsuario('ojeda')" ontouchend="event.preventDefault();elegirUsuario('ojeda')" style="padding:16px;background:var(--card);border:1.5px solid var(--border);border-radius:14px;color:var(--text);font-size:1rem;font-weight:700;cursor:pointer;font-family:'Syne',sans-serif;display:flex;align-items:center;gap:12px;-webkit-tap-highlight-color:rgba(0,0,0,0);user-select:none;">
         <span style="font-size:1.5rem;">🛵</span>
         <div style="text-align:left;"><div>Lucas Ojeda</div><div style="font-size:0.72rem;color:var(--muted);font-weight:400;margin-top:2px;">Vendedor</div></div>
       </button>
@@ -345,18 +345,18 @@ h1,h2,h3,.syne{font-family:'Syne',sans-serif;}
     </div>
     <div id="pinError" style="text-align:center;color:var(--red);font-size:0.82rem;margin-bottom:10px;min-height:18px;"></div>
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">
-      <button class="pin-btn" onclick="presionarPin('1')">1</button>
-      <button class="pin-btn" onclick="presionarPin('2')">2</button>
-      <button class="pin-btn" onclick="presionarPin('3')">3</button>
-      <button class="pin-btn" onclick="presionarPin('4')">4</button>
-      <button class="pin-btn" onclick="presionarPin('5')">5</button>
-      <button class="pin-btn" onclick="presionarPin('6')">6</button>
-      <button class="pin-btn" onclick="presionarPin('7')">7</button>
-      <button class="pin-btn" onclick="presionarPin('8')">8</button>
-      <button class="pin-btn" onclick="presionarPin('9')">9</button>
+      <button class="pin-btn" onclick="presionarPin('1')" ontouchend="event.preventDefault();presionarPin('1')">1</button>
+      <button class="pin-btn" onclick="presionarPin('2')" ontouchend="event.preventDefault();presionarPin('2')">2</button>
+      <button class="pin-btn" onclick="presionarPin('3')" ontouchend="event.preventDefault();presionarPin('3')">3</button>
+      <button class="pin-btn" onclick="presionarPin('4')" ontouchend="event.preventDefault();presionarPin('4')">4</button>
+      <button class="pin-btn" onclick="presionarPin('5')" ontouchend="event.preventDefault();presionarPin('5')">5</button>
+      <button class="pin-btn" onclick="presionarPin('6')" ontouchend="event.preventDefault();presionarPin('6')">6</button>
+      <button class="pin-btn" onclick="presionarPin('7')" ontouchend="event.preventDefault();presionarPin('7')">7</button>
+      <button class="pin-btn" onclick="presionarPin('8')" ontouchend="event.preventDefault();presionarPin('8')">8</button>
+      <button class="pin-btn" onclick="presionarPin('9')" ontouchend="event.preventDefault();presionarPin('9')">9</button>
       <div></div>
-      <button class="pin-btn" onclick="presionarPin('0')">0</button>
-      <button class="pin-btn" onclick="borrarPin()" style="font-size:1.2rem;">⌫</button>
+      <button class="pin-btn" onclick="presionarPin('0')" ontouchend="event.preventDefault();presionarPin('0')">0</button>
+      <button class="pin-btn" onclick="borrarPin()" ontouchend="event.preventDefault();borrarPin()" style="font-size:1.2rem;">⌫</button>
     </div>
   </div>
 </div>
@@ -1094,7 +1094,11 @@ function setSyncStatus(s){
   }
 }
 
-// ===== SYNC AUTOMÁTICO =====
+// Capturar errores JS globales
+window.onerror = function(msg, src, line){
+  console.error("ERROR JS:", msg, "linea:", line);
+  return false;
+};
 var syncInterval = null;
 
 function iniciarSyncAutomatico(){
@@ -3569,6 +3573,8 @@ function imprimirCierrePDF(){
       else { abrirVentanaPDF(html, 800, 700); }
     }).catch(function(){ setSyncStatus("error"); abrirVentanaPDF(html, 800, 700); });
   } else { abrirVentanaPDF(html, 800, 700); }
+}
+
 function imprimirCierreMensualPDF(){
   var pp=getPedidosMes(0);
   var ppAnt=getPedidosMes(1);
