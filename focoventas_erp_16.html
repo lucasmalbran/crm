@@ -767,7 +767,7 @@ h1,h2,h3,.syne{font-family:'Syne',sans-serif;}
   </div>
 
   <!-- ACTUALIZADOR MASIVO MOBILE (solo admin) -->
-  <div id="massUpdatePanel" style="margin:10px 14px;background:var(--card);border-radius:14px;border:1px solid rgba(244,160,32,0.3);padding:14px;display:none;">
+  <div id="massUpdatePanel" style="margin:10px 14px;background:var(--card);border-radius:14px;border:1px solid rgba(244,160,32,0.3);padding:14px;display:none!important;">
     <div style="font-family:'Syne',sans-serif;font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--orange);margin-bottom:10px;">⚡ Actualizar precios en masa</div>
     <div style="display:flex;gap:8px;margin-bottom:8px;">
       <select id="massMarcaMobile" onchange="actualizarPreviewMassMobile()" style="flex:1;padding:10px 12px;background:var(--dark3);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:0.88rem;outline:none;">
@@ -1094,6 +1094,26 @@ function setSyncStatus(s){
   }
 }
 
+// ===== SYNC AUTOMÁTICO =====
+var syncInterval = null;
+
+function iniciarSyncAutomatico(){
+  if(syncInterval) clearInterval(syncInterval);
+  syncInterval = setInterval(function(){
+    if(!ERP_SCRIPT_URL) return;
+    // Solo sincronizar si la ventana está visible
+    if(document.hidden) return;
+    cargarDesdeSheets();
+  }, 60000); // cada 60 segundos
+}
+
+// Pausar sync cuando la pestaña no está visible
+document.addEventListener("visibilitychange", function(){
+  if(!document.hidden && ERP_SCRIPT_URL){
+    cargarDesdeSheets();
+  }
+});
+
 function conectarERP(){
   var url = document.getElementById("erpUrlInput").value.trim();
   if(!url.startsWith("https://script.google.com")){alert("URL inválida");return;}
@@ -1101,6 +1121,7 @@ function conectarERP(){
   localStorage.setItem("fv_erp_url",url);
   document.getElementById("erpConfigBanner").style.display="none";
   cargarDesdeSheets();
+  iniciarSyncAutomatico();
 }
 
 function cargarDesdeSheets(){
@@ -1697,9 +1718,9 @@ function renderProductos(){
   var esAdmin = usuarioActual && usuarioActual.rol==="admin";
   var inpStyle="width:100%;background:var(--dark3);border:1.5px solid var(--border);border-radius:8px;color:var(--text);font-family:'Inter',sans-serif;font-weight:700;font-size:0.92rem;padding:9px 10px;outline:none;text-align:right;";
 
-  // Mostrar/ocultar panel de admin
+  // Mostrar/ocultar panel de admin — siempre re-evaluar
   var massPanel=document.getElementById("massUpdatePanel");
-  if(massPanel) massPanel.style.display=esAdmin?"block":"none";
+  if(massPanel) massPanel.style.cssText=esAdmin?"margin:10px 14px;background:var(--card);border-radius:14px;border:1px solid rgba(244,160,32,0.3);padding:14px;display:block":"display:none";
   var btnGuardar=document.getElementById("btnGuardarStock");
   if(btnGuardar) btnGuardar.style.display=esAdmin?"inline-block":"none";
 
@@ -2485,6 +2506,8 @@ function verificarPin(){
     }
     showToast("Bienvenido, "+u.nombre.split(" ")[0]+" "+u.icono);
     if(IS_DESKTOP) initDesktop();
+    // Arrancar sync automático
+    if(ERP_SCRIPT_URL) iniciarSyncAutomatico();
   } else {
     document.getElementById("pinError").textContent="PIN incorrecto ❌";
     pinActual=""; actualizarDots();
