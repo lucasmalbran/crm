@@ -1671,10 +1671,10 @@ function imprimirTicket(formato){
     .then(function(res){
       setSyncStatus("ok");
       if(res.ok && res.url){
+        // Abrir el PDF directo — dispara "Abrir con Drive / Descargar"
         window.open(res.url, "_blank");
         showToast("📄 Comprobante guardado en Drive");
       } else {
-        // Fallback a popup local
         var win=window.open("","_blank","width="+(formato==="a4"?"800,height=700":"380,height=500"));
         if(win){win.document.write(ticketHTML);win.document.close();}
       }
