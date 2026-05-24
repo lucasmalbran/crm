@@ -405,8 +405,20 @@ h1,h2,h3,.syne{font-family:'Syne',sans-serif;}
       <div class="ds-grid-4" id="dsKpis" style="margin-bottom:20px;"></div>
       <div class="ds-grid-2" style="margin-bottom:20px;">
         <div class="ds-card">
-          <div class="ds-card-title">📦 Últimas ventas</div>
-          <table class="ds-table"><thead><tr><th>Cliente</th><th>Total</th><th>Cobro</th><th>Hora</th><th></th></tr></thead>
+          <div class="ds-card-title" style="display:flex;justify-content:space-between;align-items:center;">
+            📦 Últimas ventas
+            <div style="display:flex;gap:6px;align-items:center;">
+              <select id="dsFiltroVentas" onchange="renderDesktop()" style="padding:4px 8px;background:var(--dark3);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:0.72rem;outline:none;">
+                <option value="hoy">Hoy</option>
+                <option value="semana">Semana</option>
+                <option value="mes">Mes</option>
+                <option value="fecha">Fecha...</option>
+                <option value="todo">Todas</option>
+              </select>
+              <input type="date" id="dsFiltroFechaCustom" onchange="renderDesktop()" style="display:none;padding:4px 8px;background:var(--dark3);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:0.72rem;outline:none;">
+            </div>
+          </div>
+          <table class="ds-table"><thead><tr><th>Cliente</th><th>Total</th><th>Cobro</th><th>Fecha</th><th>Hora</th><th></th></tr></thead>
           <tbody id="dsUltimasVentas"></tbody></table>
         </div>
         <div class="ds-card">
@@ -3006,6 +3018,16 @@ function enviarTicketWA(){
   window.open("https://wa.me/"+(cli.tel?"54"+cli.tel:"")+"?text="+encodeURIComponent(msg),"_blank");
 }
 
+function reimprimirTicketId(pedidoId){
+  pedidoAccionId=pedidoId;
+  reimprimirTicket();
+}
+
+function enviarTicketWAId(pedidoId){
+  pedidoAccionId=pedidoId;
+  enviarTicketWA();
+}
+
 function abrirAccionesPedido(pedidoId){
   var p=pedidos.find(function(x){return x.id===pedidoId;});if(!p)return;
   pedidoAccionId=pedidoId;
@@ -3514,17 +3536,37 @@ function renderDsDashboard(){
     '<div style="flex:1;background:rgba(244,197,66,0.08);border:1px solid rgba(244,197,66,0.2);border-radius:10px;padding:12px;text-align:center;"><div style="font-family:\'Syne\',sans-serif;font-weight:800;color:var(--yellow);">'+peso(cc)+'</div><div style="font-size:0.7rem;color:var(--muted);margin-top:3px;">📒 Cta. Cte.</div></div>'+
     '</div>';
 
-  // Últimas ventas
-  document.getElementById("dsUltimasVentas").innerHTML = hoy.length===0?
-    '<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--muted);">Sin ventas hoy</td></tr>':
-    hoy.slice().reverse().slice(0,10).map(function(p){
+  // Filtro de ventas desktop
+  var dsFiltro=(document.getElementById("dsFiltroVentas")||{value:"hoy"}).value;
+  var dsFechaCustomEl=document.getElementById("dsFiltroFechaCustom");
+  if(dsFechaCustomEl) dsFechaCustomEl.style.display=dsFiltro==="fecha"?"inline-block":"none";
+
+  var pedidosFiltrados=pedidos.filter(function(p){
+    if(p.esPago||p.total<=0) return false;
+    var pFecha=p.fecha?String(p.fecha).split("T")[0]:"";
+    if(dsFiltro==="hoy") return pFecha===hoyStr();
+    if(dsFiltro==="semana"){var d=(new Date(hoyStr())-new Date(pFecha))/(864e5);return d>=0&&d<7;}
+    if(dsFiltro==="mes"){var fp=new Date(pFecha);var n=new Date();return fp.getMonth()===n.getMonth()&&fp.getFullYear()===n.getFullYear();}
+    if(dsFiltro==="fecha"){var sel=dsFechaCustomEl?dsFechaCustomEl.value:"";return sel&&pFecha===sel;}
+    return true; // todo
+  });
+
+  document.getElementById("dsUltimasVentas").innerHTML = pedidosFiltrados.length===0?
+    '<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--muted);">Sin ventas en este período</td></tr>':
+    pedidosFiltrados.slice().reverse().slice(0,50).map(function(p){
       var cli=clientes.find(function(c){return c.id===p.clienteId;})||{nombre:"?"};
-      return '<tr onclick="abrirAccionesPedido('+p.id+')">'+
+      var pFecha=p.fecha?String(p.fecha).split("T")[0]:"";
+      return '<tr>'+
         '<td>'+cli.nombre+'</td>'+
         '<td style="font-family:\'Syne\',sans-serif;font-weight:700;color:var(--green);">'+peso(p.total)+'</td>'+
         '<td><span style="font-size:0.75rem;color:var(--muted);">'+p.cobro+'</span></td>'+
+        '<td style="font-size:0.75rem;color:var(--muted);">'+pFecha+'</td>'+
         '<td style="font-size:0.75rem;color:var(--muted);">'+p.hora+'</td>'+
-        '<td><button onclick="event.stopPropagation();abrirAccionesPedido('+p.id+')" style="background:none;border:1px solid var(--border);border-radius:6px;padding:3px 8px;color:var(--muted);font-size:0.75rem;cursor:pointer;">✏️</button></td>'+
+        '<td style="display:flex;gap:4px;">'+
+          '<button onclick="event.stopPropagation();abrirAccionesPedido('+p.id+')" style="background:none;border:1px solid var(--border);border-radius:6px;padding:3px 8px;color:var(--muted);font-size:0.75rem;cursor:pointer;">✏️</button>'+
+          '<button onclick="event.stopPropagation();reimprimirTicketId('+p.id+')" style="background:none;border:1px solid var(--border);border-radius:6px;padding:3px 8px;color:var(--muted);font-size:0.75rem;cursor:pointer;">📄</button>'+
+          '<button onclick="event.stopPropagation();enviarTicketWAId('+p.id+')" style="background:none;border:1px solid rgba(37,211,102,0.3);border-radius:6px;padding:3px 8px;color:#25D366;font-size:0.75rem;cursor:pointer;">💬</button>'+
+        '</td>'+
       '</tr>';
     }).join("");
 
