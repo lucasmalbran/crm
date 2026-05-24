@@ -694,7 +694,14 @@ h1,h2,h3,.syne{font-family:'Syne',sans-serif;}
 
   <div class="vendor-row" id="vendorCards"></div>
 
-  <div class="sec">📦 Últimas ventas <span class="sec-badge" id="pedidosBadge">0</span></div>
+  <div class="sec">📦 Últimas ventas <span class="sec-badge" id="pedidosBadge">0</span>
+    <select id="adminFiltroVentas" onchange="renderAdmin()" style="margin-left:8px;padding:3px 8px;background:var(--dark3);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:0.72rem;outline:none;">
+      <option value="hoy">Hoy</option>
+      <option value="semana">Semana</option>
+      <option value="mes">Mes</option>
+      <option value="todo">Todas</option>
+    </select>
+  </div>
   <div id="pedidosList"></div>
   <div class="sec">💳 Cobros del día <span class="sec-badge" id="cobrosBadge">0</span></div>
   <div id="cobrosList"></div>
@@ -1595,15 +1602,20 @@ function renderAdmin(){
     '</div>';
   }).join("");
 
-  // Ventas (solo pedidos reales, sin pagos)
+  // Ventas con filtro
+  var filtroAdmin=(document.getElementById("adminFiltroVentas")||{value:"hoy"}).value;
   var hoyFecha = hoyStr();
   var soloVentas = pedidos.filter(function(p){
-    var f = p.fecha ? String(p.fecha).split("T")[0] : "";
-    return f===hoyFecha && !p.esPago && p.total>0;
+    if(p.esPago||p.total<=0) return false;
+    var fecha=p.fecha?String(p.fecha).split("T")[0]:"";
+    if(filtroAdmin==="hoy") return fecha===hoyFecha;
+    if(filtroAdmin==="semana"){var d=(new Date(hoyFecha)-new Date(fecha))/(864e5);return d>=0&&d<7;}
+    if(filtroAdmin==="mes"){var fp=new Date(fecha);var n=new Date();return fp.getMonth()===n.getMonth()&&fp.getFullYear()===n.getFullYear();}
+    return true; // todo
   });
   var soloCobros = pedidos.filter(function(p){
-    var f = p.fecha ? String(p.fecha).split("T")[0] : "";
-    return f===hoyFecha && p.esPago;
+    var fecha=p.fecha?String(p.fecha).split("T")[0]:"";
+    return fecha===hoyFecha && p.esPago;
   });
 
   document.getElementById("pedidosBadge").textContent=soloVentas.length;
@@ -1671,15 +1683,18 @@ function getFiltroMobilePedidos(){
   var filtroMobile=(document.getElementById("pedidosFiltroMobile")||{value:"hoy"}).value;
   var misP = pedidos.filter(function(p){
     if(p.esPago||p.total<=0) return false;
-    if(filtroMobile==="hoy") return p.fecha===hoyStr()&&p.vendedorId===1;
-    if(filtroMobile==="semana"){var d=(new Date(hoyStr())-new Date(p.fecha))/(864e5);return d>=0&&d<7&&p.vendedorId===1;}
-    if(filtroMobile==="mes"){var fp=new Date(p.fecha);var n=new Date();return fp.getMonth()===n.getMonth()&&fp.getFullYear()===n.getFullYear()&&p.vendedorId===1;}
+    if(p.vendedorId!==1) return false;
+    var fecha=p.fecha?String(p.fecha).split("T")[0]:"";
+    if(filtroMobile==="hoy") return fecha===hoyStr();
+    if(filtroMobile==="semana"){var d=(new Date(hoyStr())-new Date(fecha))/(864e5);return d>=0&&d<7;}
+    if(filtroMobile==="mes"){var fp=new Date(fecha);var n=new Date();return fp.getMonth()===n.getMonth()&&fp.getFullYear()===n.getFullYear();}
     if(filtroMobile==="fecha"){
       var fechaEl=document.getElementById("pedidosFechaCustom");
       var fechaSel=fechaEl?fechaEl.value:"";
-      return fechaSel&&p.fecha===fechaSel&&p.vendedorId===1;
+      return fechaSel&&fecha===fechaSel;
     }
-    return p.vendedorId===1;
+    if(filtroMobile==="todo") return true;
+    return true;
   });
   return misP;
 }
