@@ -408,14 +408,14 @@ h1,h2,h3,.syne{font-family:'Syne',sans-serif;}
           <div class="ds-card-title" style="display:flex;justify-content:space-between;align-items:center;">
             📦 Últimas ventas
             <div style="display:flex;gap:6px;align-items:center;">
-              <select id="dsFiltroVentas" onchange="renderDesktop()" style="padding:4px 8px;background:var(--dark3);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:0.72rem;outline:none;">
+              <select id="dsFiltroVentas" onchange="initDesktop()" style="padding:4px 8px;background:var(--dark3);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:0.72rem;outline:none;">
                 <option value="hoy">Hoy</option>
                 <option value="semana">Semana</option>
                 <option value="mes">Mes</option>
                 <option value="fecha">Fecha...</option>
                 <option value="todo">Todas</option>
               </select>
-              <input type="date" id="dsFiltroFechaCustom" onchange="renderDesktop()" style="display:none;padding:4px 8px;background:var(--dark3);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:0.72rem;outline:none;">
+              <input type="date" id="dsFiltroFechaCustom" onchange="initDesktop()" style="display:none;padding:4px 8px;background:var(--dark3);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:0.72rem;outline:none;">
             </div>
           </div>
           <table class="ds-table"><thead><tr><th>Cliente</th><th>Total</th><th>Cobro</th><th>Fecha</th><th>Hora</th><th></th></tr></thead>
@@ -1324,6 +1324,11 @@ function cargarDesdeSheets(){
           p.total=Number(p.total)||0;
           p.ganancia=Number(p.ganancia)||0;
           p.esPago=p.esPago==="true"||p.esPago===true;
+          // Normalizar hora — Sheets la convierte a fecha 1899-12-30T...
+          if(p.hora && String(p.hora).indexOf("T")!==-1){
+            var d=new Date(p.hora);
+            p.hora=d.getHours().toString().padStart(2,"0")+":"+d.getMinutes().toString().padStart(2,"0");
+          }
           try{p.items=typeof p.items==="string"?JSON.parse(p.items):(p.items||{});}catch(e){p.items={};}
           return p;
         });
