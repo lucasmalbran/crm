@@ -3288,18 +3288,20 @@ var gastosHoy = [];
 
 function abrirCierreRuta(){
   gastosHoy = [];
-  var dateInput = document.getElementById("cierreFechaSelect");
-  if(dateInput){
-    // Buscar la fecha más reciente con pedidos del vendedor
-    var fechasConPedidos = pedidos
-      .filter(function(p){return p.vendedorId===1&&!p.esPago&&p.total>0;})
-      .map(function(p){return String(p.fecha).split("T")[0];})
-      .filter(function(f){return f;});
-    var ultimaFecha = fechasConPedidos.sort().reverse()[0] || hoyStr();
-    dateInput.value = ultimaFecha;
-  }
-  renderCierre();
+  // Buscar la fecha más reciente con pedidos del vendedor
+  var fechasConPedidos = pedidos
+    .filter(function(p){return p.vendedorId===1&&!p.esPago&&p.total>0;})
+    .map(function(p){return String(p.fecha).split("T")[0];})
+    .filter(function(f){return f;});
+  var ultimaFecha = fechasConPedidos.sort().reverse()[0] || hoyStr();
+
   document.getElementById("cierreOverlay").classList.add("active");
+  // Esperar que el DOM esté listo antes de setear el valor
+  setTimeout(function(){
+    var dateInput = document.getElementById("cierreFechaSelect");
+    if(dateInput) dateInput.value = ultimaFecha;
+    renderCierre(ultimaFecha);
+  }, 50);
 }
 
 function renderCierreRuta(){
