@@ -2083,38 +2083,12 @@ function imprimirTicket(formato){
     '</body></html>';
   }
 
-  // Subir a Google Drive si hay URL del ERP
-  if(ERP_SCRIPT_URL){
-    setSyncStatus("syncing");
-    var nombre = "Comprobante-"+numPedido+"-"+cli.nombre.replace(/\s+/g,"-")+"-"+p.fecha;
-    fetch(ERP_SCRIPT_URL, {
-      method:"POST",
-      body: JSON.stringify({action:"saveComprobante", html:ticketHTML, nombre:nombre})
-    })
-    .then(function(r){return r.json();})
-    .then(function(res){
-      setSyncStatus("ok");
-      if(res.ok && res.url){
-        // Abrir el PDF directo — dispara "Abrir con Drive / Descargar"
-        window.open(res.url, "_blank");
-        showToast("📄 Comprobante guardado en Drive");
-      } else {
-        var win=window.open("","_blank","width="+(formato==="a4"?"800,height=700":"380,height=500"));
-        if(win){win.document.write(ticketHTML);win.document.close();}
-      }
-    })
-    .catch(function(){
-      setSyncStatus("error");
-      // Fallback a popup local
-      var win=window.open("","_blank","width="+(formato==="a4"?"800,height=700":"380,height=500"));
-      if(win){win.document.write(ticketHTML);win.document.close();}
-    });
-  } else {
-    // Sin Drive — abrir popup local
-    var win=window.open("","_blank","width="+(formato==="a4"?"800,height=700":"380,height=500"));
-    if(win){ win.document.write(ticketHTML); win.document.close(); }
-    else { showToast("⚠️ Habilitá los popups para imprimir"); }
-  }
+  // Abrir ventana local con el ticket
+  var w=formato==="a4"?"800":"380";
+  var h=formato==="a4"?"700":"500";
+  var win=window.open("","_blank","width="+w+",height="+h);
+  if(win){ win.document.write(ticketHTML); win.document.close(); }
+  else { showToast("⚠️ Habilitá los popups para imprimir"); }
 }
 
 // ===== STOCK =====
@@ -4069,8 +4043,6 @@ function imprimirCierrePDF(){
 
   abrirVentanaPDF(html, 800, 700);
 }
-
-function imprimirCierreMensualPDF(){
   var pp=getPedidosMes(0);
   var ppAnt=getPedidosMes(1);
   var mesNombre=getNombreMes(0);
@@ -4119,17 +4091,7 @@ function imprimirCierreMensualPDF(){
   '<br><button class="no-print" onclick="window.print()" style="padding:12px 20px;background:#d62b2b;color:white;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;margin-top:10px;">📄 Guardar como PDF</button>'+
   '</body></html>';
 
-  if(ERP_SCRIPT_URL){
-    setSyncStatus("syncing");
-    var nombre="Cierre-Mensual-"+mesNombre.replace(/\s+/g,"-");
-    fetch(ERP_SCRIPT_URL,{method:"POST",body:JSON.stringify({action:"saveCierre",html:html,nombre:nombre})})
-    .then(function(r){return r.json();})
-    .then(function(res){
-      setSyncStatus("ok");
-      if(res.ok && res.url){ window.open(res.url,"_blank"); showToast("📄 Cierre mensual guardado en Drive"); }
-      else { abrirVentanaPDF(html, 900, 700); }
-    }).catch(function(){ setSyncStatus("error"); abrirVentanaPDF(html, 900, 700); });
-  } else { abrirVentanaPDF(html, 900, 700); }
+  abrirVentanaPDF(html, 900, 700);
 }
 
 function abrirVentanaPDF(html, w, h){
