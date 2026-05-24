@@ -3078,7 +3078,11 @@ function editarPedido(){
   pedidoActual.total=total;pedidoActual.ganancia=ganancia;
   document.getElementById("pedidoTotal").textContent=peso(total);
   document.querySelectorAll(".cobro-btn").forEach(function(b){b.classList.remove("sel");if(b.textContent.toLowerCase().includes(p.cobro.substring(0,4)))b.classList.add("sel");});
-  document.getElementById("pedidoOverlay").classList.add("active");
+  // Forzar overlay encima en desktop
+  var overlay=document.getElementById("pedidoOverlay");
+  overlay.style.zIndex="9999";
+  overlay.style.position="fixed";
+  overlay.classList.add("active");
 }
 
 var _orig=confirmarPedido;
