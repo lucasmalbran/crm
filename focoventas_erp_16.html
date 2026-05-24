@@ -3384,7 +3384,28 @@ function renderCierre(fechaParam){
     }).join("");
 
   document.getElementById("cierreNeto").textContent=peso(netoEfectivo);
-  document.getElementById("cierreGanancia").textContent=peso(ganancia);
+
+  // Clientes con deuda (cta cte)
+  var conDeuda = clientes.filter(function(c){return (c.saldo||0)>0;}).sort(function(a,b){return b.saldo-a.saldo;});
+  var totalDeuda = conDeuda.reduce(function(a,c){return a+(c.saldo||0);},0);
+  var ctaCteDiv = document.getElementById("cierreCtaCte");
+  if(ctaCteDiv){
+    if(conDeuda.length===0){
+      ctaCteDiv.innerHTML='<div style="font-size:0.82rem;color:var(--green);padding:6px 0;">✅ Sin deudas pendientes</div>';
+    } else {
+      ctaCteDiv.innerHTML=
+        conDeuda.map(function(c){
+          return '<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);">'+
+            '<span style="font-size:0.85rem;font-weight:600;">'+c.nombre+'</span>'+
+            '<span style="font-family:\'Syne\',sans-serif;font-weight:700;color:var(--red);">'+peso(c.saldo)+'</span>'+
+          '</div>';
+        }).join("")+
+        '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;margin-top:4px;">'+
+          '<span style="font-size:0.85rem;font-weight:700;">Total adeudado</span>'+
+          '<span style="font-family:\'Syne\',sans-serif;font-weight:800;color:var(--red);">'+peso(totalDeuda)+'</span>'+
+        '</div>';
+    }
+  }
 }
 
 function agregarGasto(){
@@ -3444,7 +3465,15 @@ function enviarCierreWA(){
     "─────────────────\n"+
     "✅ Cierre enviado desde Foco Ventas";
 
-  // Número del admin — usamos el tuyo
+  // Agregar clientes con deuda si los hay
+  var conDeuda = clientes.filter(function(c){return (c.saldo||0)>0;});
+  if(conDeuda.length>0){
+    msg += "\n\n📒 *Cuentas corrientes pendientes:*\n"+
+      conDeuda.map(function(c){return "• "+c.nombre+": "+peso(c.saldo);}).join("\n")+
+      "\n*Total adeudado: "+peso(conDeuda.reduce(function(a,c){return a+(c.saldo||0);},0))+"*";
+  }
+
+  // Número del admin
   window.open("https://wa.me/543512427947?text="+encodeURIComponent(msg),"_blank");
 }
 // ===== DESKTOP RENDERING =====
@@ -4479,10 +4508,12 @@ window.addEventListener("resize", function(){
         <div style="font-size:0.85rem;color:var(--muted);">💵 Efectivo a rendir</div>
         <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:1.1rem;color:var(--green);" id="cierreNeto">$0</div>
       </div>
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px;">
-        <div style="font-size:0.85rem;color:var(--muted);">📈 Ganancia del día</div>
-        <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:1.1rem;color:var(--blue);" id="cierreGanancia">$0</div>
-      </div>
+    </div>
+
+    <!-- CLIENTES CON DEUDA -->
+    <div style="padding:14px 18px 0;">
+      <div style="font-size:0.72rem;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">📒 Cuentas corrientes pendientes</div>
+      <div id="cierreCtaCte"></div>
     </div>
 
     <div style="padding:14px 18px;display:flex;flex-direction:column;gap:10px;">
