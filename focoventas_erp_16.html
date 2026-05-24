@@ -1596,8 +1596,15 @@ function renderAdmin(){
   }).join("");
 
   // Ventas (solo pedidos reales, sin pagos)
-  var soloVentas = hoy.filter(function(p){return !p.esPago && p.total>0;});
-  var soloCobros = pedidos.filter(function(p){return p.fecha===hoyStr() && p.esPago;});
+  var hoyFecha = hoyStr();
+  var soloVentas = pedidos.filter(function(p){
+    var f = p.fecha ? String(p.fecha).split("T")[0] : "";
+    return f===hoyFecha && !p.esPago && p.total>0;
+  });
+  var soloCobros = pedidos.filter(function(p){
+    var f = p.fecha ? String(p.fecha).split("T")[0] : "";
+    return f===hoyFecha && p.esPago;
+  });
 
   document.getElementById("pedidosBadge").textContent=soloVentas.length;
   document.getElementById("cobrosBadge").textContent=soloCobros.length;
@@ -1820,8 +1827,18 @@ function filtrarPedidoProds(){
 
 function cambiarQty(prodId,delta){
   if(!pedidoActual.items[prodId]) pedidoActual.items[prodId]=0;
-  pedidoActual.items[prodId]=Math.max(0,pedidoActual.items[prodId]+delta);
-  document.getElementById("qty-"+prodId).textContent=pedidoActual.items[prodId];
+  var prod=productos.find(function(x){return x.id===prodId;});
+  var stockDisp=prod?(prod.stock||0):999;
+  var nueva=Math.max(0,pedidoActual.items[prodId]+delta);
+  // Advertir si supera el stock pero permitir igual
+  if(delta>0 && prod && nueva>stockDisp && stockDisp>=0){
+    showToast("⚠️ Stock disponible: "+stockDisp+"u");
+  }
+  pedidoActual.items[prodId]=nueva;
+  var el=document.getElementById("qty-"+prodId);
+  if(el) el.textContent=nueva;
+  // Colorear en rojo si supera stock
+  if(el) el.style.color=(prod && nueva>stockDisp)?"var(--red)":"var(--text)";
   calcTotal();
 }
 
@@ -1845,6 +1862,17 @@ function setCobro(btn,tipo){
 
 function confirmarPedido(){
   if(!pedidoActual.total||pedidoActual.total===0){showToast("⚠️ Agregá al menos un producto");return;}
+
+  // Validar stock disponible
+  var sinStock=[];
+  Object.keys(pedidoActual.items).forEach(function(id){
+    var qty=pedidoActual.items[id]; if(!qty||qty<=0) return;
+    var p=productos.find(function(x){return x.id===parseInt(id);});
+    if(p && (p.stock||0)<qty) sinStock.push(p.nombre+" (stock: "+(p.stock||0)+", pedido: "+qty+")");
+  });
+  if(sinStock.length>0){
+    if(!confirm("⚠️ Stock insuficiente:\n"+sinStock.join("\n")+"\n\n¿Confirmar igual?")) return;
+  }
   var pedido={
     id:Date.now(),clienteId:pedidoActual.clienteId,vendedorId:1,
     items:Object.assign({},pedidoActual.items),
