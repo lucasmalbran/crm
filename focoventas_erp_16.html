@@ -1071,6 +1071,9 @@ var pedidos = JSON.parse(localStorage.getItem("sf_pedidos") || "[]").map(functio
   p.esPago = p.esPago===true||p.esPago==="true";
   p.total = Number(p.total)||0;
   p.ganancia = Number(p.ganancia)||0;
+  p.vendedorId = Number(p.vendedorId)||1;
+  p.clienteId = Number(p.clienteId)||0;
+  p.fecha = p.fecha?String(p.fecha).split("T")[0]:"";
   try{p.items=typeof p.items==="string"?JSON.parse(p.items):p.items||{};}catch(e){p.items={};}
   return p;
 });
@@ -1773,7 +1776,10 @@ function calcTiempoRuta(vendedorId){
 
 function renderVendedor(){
   document.getElementById("vendNombre").textContent="🛵 "+vendedores[0].nombre;
-  var misP=pedidos.filter(function(p){return p.fecha===hoyStr()&&p.vendedorId===1;});
+  var misP=pedidos.filter(function(p){
+    var fecha=p.fecha?String(p.fecha).split("T")[0]:"";
+    return fecha===hoyStr()&&p.vendedorId===1&&!p.esPago&&p.total>0;
+  });
   var miTotal=misP.reduce(function(a,p){return a+p.total;},0);
   document.getElementById("vendSub").textContent=misP.length+" pedidos · "+peso(miTotal)+" cobrados";
   document.getElementById("vendStats").innerHTML=
