@@ -1298,15 +1298,6 @@ function cargarDesdeSheets(){
     }).catch(function(){setSyncStatus("error");});
 }
 
-function syncCliente(c){
-  saveLocal();
-  if(!ERP_SCRIPT_URL) return;
-  setSyncStatus("syncing");
-  var row=Object.assign({},c,{marcas:c.marcas.join(",")});
-  fetch(ERP_SCRIPT_URL,{method:"POST",body:JSON.stringify({action:"save",sheet:"Clientes",row:row})})
-    .then(function(){setSyncStatus("ok");}).catch(function(){setSyncStatus("error");});
-}
-
 // ===== COLA OFFLINE =====
 var offlineQueue = JSON.parse(localStorage.getItem("fv_offline_queue") || "[]");
 
@@ -1325,20 +1316,15 @@ function procesarQueue(){
   var body = item.action==="delete"
     ? {action:"delete", sheet:item.sheet, id:item.data}
     : {action:"save", sheet:item.sheet, row:item.data};
-  fetch(ERP_SCRIPT_URL, {method:"POST", body:JSON.stringify(body)})
-    .then(function(){
+  erpFetch(body,
+    function(){
       offlineQueue.shift();
       guardarQueue();
-      if(offlineQueue.length > 0) procesarQueue(); // procesar el siguiente
-      else {
-        setSyncStatus("ok");
-        if(offlineQueue.length===0) showToast("☁️ Todo sincronizado con la nube");
-      }
-    })
-    .catch(function(){
-      // Dejar en la cola para el próximo intento
-      setSyncStatus("error");
-    });
+      if(offlineQueue.length > 0) procesarQueue();
+      else{ setSyncStatus("ok"); showToast("☁️ Todo sincronizado con la nube"); }
+    },
+    function(){ setSyncStatus("error"); }
+  );
 }
 
 // Detectar cuando vuelve la conexión
@@ -1385,9 +1371,9 @@ function forzarSyncTotal(){
   var prodRows=productos.map(function(p){return{id:p.id,nombre:p.nombre,marca:p.marca,rubro:p.rubro,costo:p.costo,precio:p.precio,stock:p.stock||0,minStock:p.minStock||3};});
 
   var promises=[
-    fetch(ERP_SCRIPT_URL,{method:"POST",body:JSON.stringify({action:"clearAndSave",sheet:"Clientes",rows:cliRows})}),
-    fetch(ERP_SCRIPT_URL,{method:"POST",body:JSON.stringify({action:"clearAndSave",sheet:"Pedidos",rows:pedRows})}),
-    fetch(ERP_SCRIPT_URL,{method:"POST",body:JSON.stringify({action:"clearAndSave",sheet:"Productos",rows:prodRows})})
+    new Promise(function(res,rej){ erpFetch({action:"clearAndSave",sheet:"Clientes",rows:cliRows}, res, rej); }),
+    new Promise(function(res,rej){ erpFetch({action:"clearAndSave",sheet:"Pedidos",rows:pedRows}, res, rej); }),
+    new Promise(function(res,rej){ erpFetch({action:"clearAndSave",sheet:"Productos",rows:prodRows}, res, rej); })
   ];
 
   Promise.all(promises)
@@ -1452,51 +1438,79 @@ function importarBackup(file){
   reader.readAsText(file);
 }
 
+function erpFetch(body, onSuccess, onError){
+  if(!ERP_SCRIPT_URL){ if(onError) onError("Sin URL"); return; }
+  // Apps Script requiere este approach para evitar CORS
+  fetch(ERP_SCRIPT_URL, {
+    method: "POST",
+    headers: {"Content-Type": "text/plain"},
+    body: JSON.stringify(body)
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(d){ if(onSuccess) onSuccess(d); })
+  .catch(function(e){
+    // Fallback: usar fetch con no-cors (no podemos leer la respuesta pero el dato se guarda)
+    fetch(ERP_SCRIPT_URL, {
+      method: "POST",
+      mode: "no-cors",
+      headers: {"Content-Type": "text/plain"},
+      body: JSON.stringify(body)
+    }).then(function(){
+      if(onSuccess) onSuccess({ok:true});
+    }).catch(function(e2){
+      if(onError) onError(e2);
+    });
+  });
+}
+
 function syncPedido(p){
   saveLocal();
-  if(!ERP_SCRIPT_URL){ agregarAQueue("save","Pedidos",Object.assign({},p,{items:JSON.stringify(p.items),esPago:p.esPago?"true":"false"})); return; }
-  setSyncStatus("syncing");
   var row=Object.assign({},p,{items:JSON.stringify(p.items),esPago:p.esPago?"true":"false"});
   if(!navigator.onLine){
     agregarAQueue("save","Pedidos",row);
-    showToast("📵 Sin internet — pedido guardado localmente");
-    setSyncStatus("local");
-    return;
+    showToast("📵 Sin internet — guardado localmente");
+    setSyncStatus("local"); return;
   }
-  fetch(ERP_SCRIPT_URL,{method:"POST",body:JSON.stringify({action:"save",sheet:"Pedidos",row:row})})
-    .then(function(r){return r.json();})
-    .then(function(res){
-      setSyncStatus("ok");
-      showToast("☁️ Pedido guardado en la nube ✅");
-    })
-    .catch(function(){
-      agregarAQueue("save","Pedidos",row);
-      showToast("📵 Sin conexión — se subirá cuando vuelva internet");
-      setSyncStatus("error");
-    });
+  setSyncStatus("syncing");
+  erpFetch({action:"save",sheet:"Pedidos",row:row},
+    function(){ setSyncStatus("ok"); showToast("☁️ Pedido guardado en la nube ✅"); },
+    function(){ agregarAQueue("save","Pedidos",row); showToast("📵 Se subirá cuando haya conexión"); setSyncStatus("error"); }
+  );
 }
 
 function syncDeletePedido(id){
   saveLocal();
-  if(!ERP_SCRIPT_URL) return;
-  fetch(ERP_SCRIPT_URL,{method:"POST",body:JSON.stringify({action:"delete",sheet:"Pedidos",id:id})})
-    .then(function(){setSyncStatus("ok");}).catch(function(){setSyncStatus("error");});
+  erpFetch({action:"delete",sheet:"Pedidos",id:id},
+    function(){ setSyncStatus("ok"); },
+    function(){ setSyncStatus("error"); }
+  );
+}
+
+function syncCliente(c){
+  saveLocal();
+  var row=Object.assign({},c,{marcas:c.marcas.join(",")});
+  erpFetch({action:"save",sheet:"Clientes",row:row},
+    function(){ setSyncStatus("ok"); },
+    function(){ setSyncStatus("error"); }
+  );
 }
 
 function syncProducto(p){
   localStorage.setItem("sf_productos",JSON.stringify(productos));
-  if(!ERP_SCRIPT_URL) return;
   var row={id:p.id,nombre:p.nombre,marca:p.marca,rubro:p.rubro,costo:p.costo,precio:p.precio,stock:p.stock||0,minStock:p.minStock||3};
-  fetch(ERP_SCRIPT_URL,{method:"POST",body:JSON.stringify({action:"save",sheet:"Productos",row:row})})
-    .then(function(){setSyncStatus("ok");}).catch(function(){setSyncStatus("error");});
+  erpFetch({action:"save",sheet:"Productos",row:row},
+    function(){ setSyncStatus("ok"); },
+    function(){ setSyncStatus("error"); }
+  );
 }
 
 function syncTodosProductos(){
-  if(!ERP_SCRIPT_URL) return;
   setSyncStatus("syncing");
   var rows=productos.map(function(p){return{id:p.id,nombre:p.nombre,marca:p.marca,rubro:p.rubro,costo:p.costo,precio:p.precio,stock:p.stock||0,minStock:p.minStock||3};});
-  fetch(ERP_SCRIPT_URL,{method:"POST",body:JSON.stringify({action:"clearAndSave",sheet:"Productos",rows:rows})})
-    .then(function(){setSyncStatus("ok");}).catch(function(){setSyncStatus("error");});
+  erpFetch({action:"clearAndSave",sheet:"Productos",rows:rows},
+    function(){ setSyncStatus("ok"); },
+    function(){ setSyncStatus("error"); }
+  );
 }
 
 // ===== NAVEGACIÓN =====
