@@ -2027,9 +2027,14 @@ function imprimirTicket(formato){
     '<br>'+
     '<div class="no-print" style="display:flex;gap:8px;margin-top:10px;">'+
       '<button onclick="window.print()" style="flex:1;padding:14px;background:#d62b2b;color:white;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;">🖨️ Imprimir</button>'+
-      '<button onclick="descargarHTML()" style="flex:1;padding:14px;background:#1a73e8;color:white;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;">📥 Descargar</button>'+
+      '<button onclick="generarPDF()" style="flex:1;padding:14px;background:#1a73e8;color:white;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;">📄 PDF</button>'+
     '</div>'+
-    '<script>function descargarHTML(){var b=new Blob([document.documentElement.outerHTML],{type:"text/html"});var a=document.createElement("a");a.href=URL.createObjectURL(b);a.download="ticket.html";a.click();}<\/script>'+
+    '<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"><\/script>'+
+    '<script>function generarPDF(){'+
+      'var el=document.querySelector(".comprobante")||document.body;'+
+      'var opt={margin:10,filename:"ticket.pdf",image:{type:"jpeg",quality:0.98},html2canvas:{scale:2},jsPDF:{unit:"mm",format:"a4",orientation:"portrait"}};'+
+      'html2pdf().set(opt).from(el).save();'+
+    '}<\/script>'+
     '<button class="no-print" onclick="window.close()" style="width:100%;padding:10px;background:none;border:1px solid #ddd;border-radius:8px;font-size:13px;cursor:pointer;margin-top:8px;">Cerrar</button>'+
     '</body></html>';
 
@@ -2074,9 +2079,14 @@ function imprimirTicket(formato){
     '<br>'+
     '<div class="no-print" style="display:flex;gap:6px;margin-top:8px;">'+
       '<button onclick="window.print()" style="flex:1;padding:10px;background:#d62b2b;color:white;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;">🖨️ Imprimir</button>'+
-      '<button onclick="descargarHTML()" style="flex:1;padding:10px;background:#1a73e8;color:white;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;">📥 Descargar</button>'+
+      '<button onclick="generarPDF()" style="flex:1;padding:10px;background:#1a73e8;color:white;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;">📄 PDF</button>'+
     '</div>'+
-    '<script>function descargarHTML(){var b=new Blob([document.documentElement.outerHTML],{type:"text/html"});var a=document.createElement("a");a.href=URL.createObjectURL(b);a.download="ticket.html";a.click();}<\/script>'+
+    '<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"><\/script>'+
+    '<script>function generarPDF(){'+
+      'var el=document.body;'+
+      'var opt={margin:2,filename:"ticket.pdf",image:{type:"jpeg",quality:0.98},html2canvas:{scale:3},jsPDF:{unit:"mm",format:[58,120],orientation:"portrait"}};'+
+      'html2pdf().set(opt).from(el).save();'+
+    '}<\/script>'+
     '<button class="no-print" onclick="window.close()" style="width:100%;padding:8px;background:none;border:1px solid #ddd;border-radius:6px;font-size:11px;cursor:pointer;margin-top:6px;">Cerrar</button>'+
     '</body></html>';
   }
@@ -4036,7 +4046,9 @@ function imprimirCierrePDF(){
     conDeuda.map(function(c){return '<div class="tr"><span>'+c.nombre+'</span><strong style="color:#dc2626;">'+peso(c.saldo)+'</strong></div>';}).join("")+
     '<div class="tr"><span style="font-weight:700;">Total adeudado</span><strong style="color:#dc2626;">'+peso(conDeuda.reduce(function(a,c){return a+c.saldo;},0))+'</strong></div>'
   :'')+
-  '<br><button class="no-print" onclick="window.print()" style="padding:12px 20px;background:#111;color:white;border:none;border-radius:8px;cursor:pointer;font-size:14px;font-weight:700;">🖨️ Imprimir / Guardar PDF</button>'+
+  '<br><button class="no-print" onclick="generarPDF()" style="padding:12px 20px;background:#111;color:white;border:none;border-radius:8px;cursor:pointer;font-size:14px;font-weight:700;">📄 Guardar como PDF</button>'+
+  '<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"><\/script>'+
+  '<script>function generarPDF(){html2pdf().set({margin:10,filename:"cierre.pdf",html2canvas:{scale:2},jsPDF:{unit:"mm",format:"a4"}}).from(document.body).save();}<\/script>'+
   '</body></html>';
 
   abrirVentanaPDF(html, 800, 700);
@@ -4088,7 +4100,9 @@ function imprimirCierreMensualPDF(){
   '<div class="row"><span>Ventas mes anterior</span><strong>'+peso(vAnt)+'</strong></div>'+
   '<div class="row"><span>Variación</span><strong class="'+(varV!==null?(varV>=0?"var-pos":"var-neg"):"")+'">'+(varV!==null?(varV>=0?"▲":"▼")+Math.abs(varV)+"%":"—")+'</strong></div>'+
   '<div class="footer">Foco Ventas · Hacé foco en lo importante: vender más. · Generado el '+new Date().toLocaleDateString("es-AR")+'</div>'+
-  '<br><button class="no-print" onclick="window.print()" style="padding:12px 20px;background:#d62b2b;color:white;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;margin-top:10px;">📄 Guardar como PDF</button>'+
+  '<br><button class="no-print" onclick="generarPDF()" style="padding:12px 20px;background:#d62b2b;color:white;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;margin-top:10px;">📄 Guardar como PDF</button>'+
+  '<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"><\/script>'+
+  '<script>function generarPDF(){html2pdf().set({margin:10,filename:"cierre-mensual.pdf",html2canvas:{scale:2},jsPDF:{unit:"mm",format:"a4"}}).from(document.body).save();}<\/script>'+
   '</body></html>';
 
   abrirVentanaPDF(html, 900, 700);
