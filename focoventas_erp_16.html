@@ -1067,7 +1067,13 @@ var clientes = JSON.parse(localStorage.getItem("sf_clientes") || "null") || [
   {id:12,nombre:"Almacen",dir:"Ambrosio Olmos 668",marcas:["BIMBO"],tipo:"Otro",tel:"",lat:-31.421,lng:-64.196,saldo:0},
 ];
 
-var pedidos = JSON.parse(localStorage.getItem("sf_pedidos") || "[]");
+var pedidos = JSON.parse(localStorage.getItem("sf_pedidos") || "[]").map(function(p){
+  p.esPago = p.esPago===true||p.esPago==="true";
+  p.total = Number(p.total)||0;
+  p.ganancia = Number(p.ganancia)||0;
+  try{p.items=typeof p.items==="string"?JSON.parse(p.items):p.items||{};}catch(e){p.items={};}
+  return p;
+});
 var pedidoActual = {clienteId:null, items:{}, cobro:"efectivo"};
 var prodsPedidoActual = [];
 var userPos = null;
@@ -1574,7 +1580,10 @@ function marcaTag(m){
 // ===== ADMIN =====
 function renderAdmin(){
   document.getElementById("fechaHoy").textContent = new Date().toLocaleDateString("es-AR",{weekday:"short",day:"numeric",month:"short"});
-  var hoy = pedidos.filter(function(p){return p.fecha===hoyStr();});
+  var hoy = pedidos.filter(function(p){
+    var fecha=p.fecha?String(p.fecha).split("T")[0]:"";
+    return fecha===hoyStr() && (p.esPago===true||p.esPago==="true"||!p.esPago);
+  });
   var totalVentas=0,totalGanancia=0,efectivo=0,transferencia=0,ctacte=0;
   hoy.forEach(function(p){
     totalVentas+=p.total; totalGanancia+=p.ganancia;
@@ -1615,7 +1624,7 @@ function renderAdmin(){
   });
   var soloCobros = pedidos.filter(function(p){
     var fecha=p.fecha?String(p.fecha).split("T")[0]:"";
-    return fecha===hoyFecha && p.esPago;
+    return fecha===hoyFecha && (p.esPago===true||p.esPago==="true");
   });
 
   document.getElementById("pedidosBadge").textContent=soloVentas.length;
