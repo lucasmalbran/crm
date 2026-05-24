@@ -725,6 +725,7 @@ h1,h2,h3,.syne{font-family:'Syne',sans-serif;}
       </label>
     </div>
     <button onclick="forzarSyncTotal()" style="width:100%;padding:11px;background:rgba(244,160,32,0.1);border:1.5px solid rgba(244,160,32,0.3);color:var(--orange);border-radius:10px;font-weight:700;font-size:0.85rem;cursor:pointer;margin-bottom:8px;">☁️ Forzar sync al Sheet</button>
+    <button onclick="actualizarURLERP()" style="width:100%;padding:11px;background:rgba(230,57,70,0.1);border:1.5px solid rgba(230,57,70,0.3);color:var(--red);border-radius:10px;font-weight:700;font-size:0.85rem;cursor:pointer;margin-bottom:8px;">🔗 Actualizar URL del servidor</button>
     <div id="queueStatus" style="font-size:0.72rem;color:var(--muted);text-align:center;"></div>
   </div>
 </div>
@@ -1352,6 +1353,23 @@ window.addEventListener("offline", function(){
 });
 
 // ===== BACKUP Y RESTAURACIÓN =====
+function actualizarURLERP(){
+  var URL_NUEVA = "https://script.google.com/macros/s/AKfycbwZHPptJAnDNs3tSnR7w1YFrO7Zy1f6Xpx1jZTwlyReTrO5j2Og_HPokxnxmaZEkMVd1w/exec";
+  var actual = localStorage.getItem("fv_erp_url") || "";
+  if(actual === URL_NUEVA){
+    showToast("✅ La URL ya está actualizada");
+    return;
+  }
+  localStorage.setItem("fv_erp_url", URL_NUEVA);
+  ERP_SCRIPT_URL = URL_NUEVA;
+  showToast("✅ URL actualizada — sincronizando...");
+  setSyncStatus("syncing");
+  setTimeout(function(){
+    cargarDesdeSheets();
+    iniciarSyncAutomatico();
+  }, 500);
+}
+
 function forzarSyncTotal(){
   if(!ERP_SCRIPT_URL){showToast("⚠️ No hay URL del ERP configurada");return;}
   var qDiv=document.getElementById("queueStatus");
