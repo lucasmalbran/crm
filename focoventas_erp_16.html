@@ -713,6 +713,19 @@ h1,h2,h3,.syne{font-family:'Syne',sans-serif;}
 
   <div class="sec">⏰ Clientes sin visitar <span class="sec-badge" style="background:var(--yellow);color:black;" id="alertasBadgeAdmin">0</span></div>
   <div id="alertasListaAdmin" style="margin-bottom:20px;"></div>
+
+  <!-- BACKUP -->
+  <div style="margin:0 14px 30px;background:var(--card);border-radius:14px;border:1px solid var(--border);padding:16px;">
+    <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.8rem;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:12px;">💾 Backup de datos</div>
+    <div style="display:flex;gap:8px;">
+      <button onclick="exportarBackup()" style="flex:1;padding:11px;background:rgba(74,158,255,0.1);border:1.5px solid rgba(74,158,255,0.3);color:var(--blue);border-radius:10px;font-weight:700;font-size:0.85rem;cursor:pointer;">⬇️ Exportar</button>
+      <label style="flex:1;padding:11px;background:rgba(46,194,126,0.1);border:1.5px solid rgba(46,194,126,0.3);color:var(--green);border-radius:10px;font-weight:700;font-size:0.85rem;cursor:pointer;text-align:center;">
+        ⬆️ Restaurar
+        <input type="file" accept=".json" onchange="importarBackup(this.files[0])" style="display:none;">
+      </label>
+    </div>
+    <div id="queueStatus" style="font-size:0.72rem;color:var(--muted);margin-top:10px;text-align:center;"></div>
+  </div>
 </div>
 
 <!-- ===== SCREEN: VENDEDOR ===== -->
@@ -737,12 +750,16 @@ h1,h2,h3,.syne{font-family:'Syne',sans-serif;}
 
   <div class="sec" style="padding-top:16px;display:flex;justify-content:space-between;align-items:center;">
     📋 Pedidos
-    <select id="pedidosFiltroMobile" onchange="renderVendedor()" style="padding:5px 10px;background:var(--dark3);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:0.75rem;outline:none;">
+    <select id="pedidosFiltroMobile" onchange="onFiltroMobileChange()" style="padding:5px 10px;background:var(--dark3);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:0.75rem;outline:none;">
       <option value="hoy">Hoy</option>
       <option value="semana">Esta semana</option>
       <option value="mes">Este mes</option>
       <option value="todo">Todos</option>
+      <option value="fecha">Fecha...</option>
     </select>
+  </div>
+  <div id="filtroFechaCustom" style="display:none;padding:6px 14px;">
+    <input type="date" id="pedidosFechaCustom" onchange="renderVendedor()" style="width:100%;padding:8px 10px;background:var(--dark3);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:0.85rem;outline:none;">
   </div>
   <div id="misPedidos"></div>
 
@@ -761,33 +778,14 @@ h1,h2,h3,.syne{font-family:'Syne',sans-serif;}
       <div class="logo" style="color:var(--blue);">Foco<em style="color:#f4a020;">Ventas</em> — Stock</div>
       <div style="display:flex;gap:6px;">
         <button onclick="abrirCargaStock()" style="background:var(--blue);color:white;border:none;border-radius:8px;padding:7px 12px;font-weight:700;font-size:0.78rem;cursor:pointer;font-family:'Syne',sans-serif;">📥 Cargar</button>
+        <button onclick="abrirNuevoProd()" style="background:var(--green);color:black;border:none;border-radius:8px;padding:7px 12px;font-weight:700;font-size:0.78rem;cursor:pointer;font-family:'Syne',sans-serif;">➕ Nuevo</button>
+        <button onclick="abrirGestionCats()" style="background:var(--card);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:7px 10px;font-weight:700;font-size:0.78rem;cursor:pointer;font-family:'Syne',sans-serif;">⚙️</button>
         <button id="btnGuardarStock" onclick="guardarTodosPrecios()" style="background:var(--green);color:black;border:none;border-radius:8px;padding:7px 12px;font-weight:700;font-size:0.78rem;cursor:pointer;font-family:'Syne',sans-serif;display:none;">💾 Guardar</button>
       </div>
     </div>
   </div>
 
-  <!-- ACTUALIZADOR MASIVO MOBILE (solo admin) -->
-  <div id="massUpdatePanel" style="margin:10px 14px;background:var(--card);border-radius:14px;border:1px solid rgba(244,160,32,0.3);padding:14px;display:none!important;">
-    <div style="font-family:'Syne',sans-serif;font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--orange);margin-bottom:10px;">⚡ Actualizar precios en masa</div>
-    <div style="display:flex;gap:8px;margin-bottom:8px;">
-      <select id="massMarcaMobile" onchange="actualizarPreviewMassMobile()" style="flex:1;padding:10px 12px;background:var(--dark3);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:0.88rem;outline:none;">
-        <option value="">Todos</option>
-        <option value="BIMBO">BIMBO</option>
-        <option value="FARGO">FARGO</option>
-        <option value="LACTAL">LACTAL</option>
-        <option value="BROT">BROT</option>
-      </select>
-      <div style="display:flex;align-items:center;gap:6px;background:var(--dark3);border:1.5px solid var(--orange);border-radius:10px;padding:0 12px;">
-        <input type="number" id="massPctMobile" placeholder="%" inputmode="numeric" oninput="actualizarPreviewMassMobile()"
-          style="width:55px;background:none;border:none;color:var(--text);font-size:1rem;font-family:'Inter',sans-serif;font-weight:700;outline:none;text-align:center;">
-        <span style="color:var(--orange);font-weight:700;">%</span>
-      </div>
-    </div>
-    <div id="massPreviewMobile" style="font-size:0.78rem;color:var(--muted);margin-bottom:10px;">Ingresá un % para ver el impacto</div>
-    <button onclick="aplicarPorcentajeMasivoMobile()" style="width:100%;padding:11px;background:var(--orange);color:black;border:none;border-radius:10px;font-family:'Syne',sans-serif;font-weight:800;font-size:0.92rem;cursor:pointer;">Aplicar</button>
-  </div>
-
-  <div class="stats-row" id="stockStats"></div>
+  <div id="stockStats" style="padding:10px 14px;"></div>
 
   <div class="search-bar">
     <input type="text" id="prodSearch" placeholder="🔍 Buscar producto..." oninput="filtrarProd()">
@@ -1068,6 +1066,7 @@ var marcaFilterActual = "";
 var vendedores = [{id:1,nombre:"Lucas Ojeda",color:"var(--green)"},{id:2,nombre:"Vendedor 2",color:"var(--blue)"}];
 
 // ===== GOOGLE SHEETS SYNC =====
+var IS_DESKTOP = window.innerWidth >= 900;
 // Forzar migración de URL vieja a nueva si corresponde
 (function(){
   var URL_VIEJA = "AKfycbzgkYQJIdEZXxxCK097w1lDEQI9cti9dA2HRYTSEiGaVOG8cTRN4_vH_Dg8Ys1859MHSg";
@@ -1102,6 +1101,112 @@ function setSyncStatus(s){
     if(s==="error") txt.textContent="Error de sync";
     if(s==="local") txt.textContent="Solo local";
   }
+}
+
+// Marcas y categorías dinámicas
+var marcasConfig = JSON.parse(localStorage.getItem("sf_marcas") || "null") || ["BIMBO","FARGO","LACTAL","BROT"];
+var categoriasConfig = JSON.parse(localStorage.getItem("sf_categorias") || "null") || ["Panificados","Seco y Dulce","Gastronómico"];
+function guardarMarcasCats(){
+  localStorage.setItem("sf_marcas", JSON.stringify(marcasConfig));
+  localStorage.setItem("sf_categorias", JSON.stringify(categoriasConfig));
+}
+
+function abrirNuevoProd(){
+  document.getElementById("nuevoProdOverlay").classList.add("active");
+  document.getElementById("npMarca").innerHTML = marcasConfig.map(function(m){return '<option value="'+m+'">'+m+'</option>';}).join("");
+  document.getElementById("npCategoria").innerHTML = categoriasConfig.map(function(c){return '<option value="'+c+'">'+c+'</option>';}).join("");
+  document.getElementById("npNombre").value="";
+  document.getElementById("npCosto").value="";
+  document.getElementById("npPrecio").value="";
+  document.getElementById("npStock").value="0";
+  setTimeout(function(){document.getElementById("npNombre").focus();},300);
+}
+
+function calcMargenNuevo(){
+  var c=parseFloat(document.getElementById("npCosto").value)||0;
+  var p=parseFloat(document.getElementById("npPrecio").value)||0;
+  var m=c>0?Math.round((p-c)/c*100):0;
+  document.getElementById("npMargenLabel").textContent=m+"% margen";
+  document.getElementById("npMargenLabel").style.color=m>=40?"var(--green)":m>=20?"var(--yellow)":"var(--red)";
+}
+
+function confirmarNuevoProd(){
+  var nombre=document.getElementById("npNombre").value.trim();
+  var costo=parseFloat(document.getElementById("npCosto").value)||0;
+  var precio=parseFloat(document.getElementById("npPrecio").value)||0;
+  var stock=parseInt(document.getElementById("npStock").value)||0;
+  var marca=document.getElementById("npMarca").value;
+  var rubro=document.getElementById("npCategoria").value;
+  if(!nombre){showToast("⚠️ El nombre es obligatorio");return;}
+  if(costo<=0||precio<=0){showToast("⚠️ Completá costo y precio");return;}
+  var nuevo={id:Date.now(),nombre:nombre,costo:costo,precio:precio,stock:stock,minStock:3,marca:marca,rubro:rubro};
+  productos.push(nuevo);
+  localStorage.setItem("sf_productos",JSON.stringify(productos));
+  document.getElementById("nuevoProdOverlay").classList.remove("active");
+  renderProductos();
+  showToast("✅ Producto '"+nombre+"' creado");
+  if(ERP_SCRIPT_URL) syncProducto(nuevo);
+}
+
+function abrirGestionCats(){
+  document.getElementById("gestionCatsOverlay").classList.add("active");
+  renderGestionCats();
+}
+
+function renderGestionCats(){
+  document.getElementById("listaMarcas").innerHTML=marcasConfig.map(function(m,i){
+    return '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);">'+
+      '<span style="font-weight:600;">'+m+'</span>'+
+      '<button onclick="eliminarMarca('+i+')" style="background:rgba(230,57,70,0.1);border:1px solid rgba(230,57,70,0.3);color:var(--red);border-radius:8px;padding:4px 10px;font-size:0.78rem;cursor:pointer;">✕</button>'+
+    '</div>';
+  }).join("");
+  document.getElementById("listaCategorias").innerHTML=categoriasConfig.map(function(c,i){
+    return '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);">'+
+      '<span style="font-weight:600;">'+c+'</span>'+
+      '<button onclick="eliminarCategoria('+i+')" style="background:rgba(230,57,70,0.1);border:1px solid rgba(230,57,70,0.3);color:var(--red);border-radius:8px;padding:4px 10px;font-size:0.78rem;cursor:pointer;">✕</button>'+
+    '</div>';
+  }).join("");
+}
+
+function agregarMarca(){
+  var val=document.getElementById("nuevaMarcaInput").value.trim().toUpperCase();
+  if(!val){showToast("⚠️ Escribí la marca");return;}
+  if(marcasConfig.indexOf(val)!==-1){showToast("⚠️ Ya existe");return;}
+  marcasConfig.push(val);
+  guardarMarcasCats();
+  document.getElementById("nuevaMarcaInput").value="";
+  renderGestionCats(); renderProductos();
+  showToast("✅ Marca '"+val+"' agregada");
+}
+
+function eliminarMarca(idx){
+  if(!confirm("¿Eliminar marca '"+marcasConfig[idx]+"'?")) return;
+  marcasConfig.splice(idx,1);
+  guardarMarcasCats(); renderGestionCats(); renderProductos();
+  showToast("✅ Marca eliminada");
+}
+
+function agregarCategoria(){
+  var val=document.getElementById("nuevaCatInput").value.trim();
+  if(!val){showToast("⚠️ Escribí la categoría");return;}
+  if(categoriasConfig.indexOf(val)!==-1){showToast("⚠️ Ya existe");return;}
+  categoriasConfig.push(val);
+  guardarMarcasCats();
+  document.getElementById("nuevaCatInput").value="";
+  renderGestionCats(); renderProductos();
+  showToast("✅ Categoría '"+val+"' agregada");
+}
+
+function eliminarCategoria(idx){
+  if(!confirm("¿Eliminar categoría '"+categoriasConfig[idx]+"'?")) return;
+  categoriasConfig.splice(idx,1);
+  guardarMarcasCats(); renderGestionCats(); renderProductos();
+  showToast("✅ Categoría eliminada");
+}
+
+function syncProducto(prod){
+  if(!ERP_SCRIPT_URL) return;
+  fetch(ERP_SCRIPT_URL,{method:"POST",body:JSON.stringify({action:"save",sheet:"Productos",row:prod})}).catch(function(){});
 }
 
 // Capturar errores JS globales
@@ -1200,13 +1305,120 @@ function syncCliente(c){
     .then(function(){setSyncStatus("ok");}).catch(function(){setSyncStatus("error");});
 }
 
+// ===== COLA OFFLINE =====
+var offlineQueue = JSON.parse(localStorage.getItem("fv_offline_queue") || "[]");
+
+function guardarQueue(){
+  localStorage.setItem("fv_offline_queue", JSON.stringify(offlineQueue));
+}
+
+function agregarAQueue(action, sheet, data){
+  offlineQueue.push({action:action, sheet:sheet, data:data, ts:Date.now()});
+  guardarQueue();
+}
+
+function procesarQueue(){
+  if(!ERP_SCRIPT_URL || offlineQueue.length===0) return;
+  var item = offlineQueue[0];
+  var body = item.action==="delete"
+    ? {action:"delete", sheet:item.sheet, id:item.data}
+    : {action:"save", sheet:item.sheet, row:item.data};
+  fetch(ERP_SCRIPT_URL, {method:"POST", body:JSON.stringify(body)})
+    .then(function(){
+      offlineQueue.shift();
+      guardarQueue();
+      if(offlineQueue.length > 0) procesarQueue(); // procesar el siguiente
+      else {
+        setSyncStatus("ok");
+        if(offlineQueue.length===0) showToast("☁️ Todo sincronizado con la nube");
+      }
+    })
+    .catch(function(){
+      // Dejar en la cola para el próximo intento
+      setSyncStatus("error");
+    });
+}
+
+// Detectar cuando vuelve la conexión
+window.addEventListener("online", function(){
+  showToast("📶 Conexión restaurada — sincronizando...");
+  setTimeout(procesarQueue, 1000);
+});
+
+window.addEventListener("offline", function(){
+  showToast("⚠️ Sin internet — guardando localmente");
+  setSyncStatus("local");
+});
+
+// ===== BACKUP Y RESTAURACIÓN =====
+function exportarBackup(){
+  var backup = {
+    version: 2,
+    fecha: new Date().toISOString(),
+    clientes: clientes,
+    pedidos: pedidos,
+    productos: productos,
+    vendedores: vendedores,
+    appConfig: appConfig
+  };
+  var json = JSON.stringify(backup, null, 2);
+  var blob = new Blob([json], {type:"application/json"});
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement("a");
+  a.href = url;
+  a.download = "focoventas_backup_" + hoyStr() + ".json";
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast("✅ Backup descargado");
+}
+
+function importarBackup(file){
+  if(!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e){
+    try{
+      var backup = JSON.parse(e.target.result);
+      if(!backup.clientes || !backup.pedidos || !backup.productos){
+        showToast("❌ Archivo inválido");return;
+      }
+      if(!confirm("¿Restaurar backup del "+backup.fecha.split("T")[0]+"? Se reemplazarán todos los datos actuales.")){return;}
+      clientes = backup.clientes;
+      pedidos = backup.pedidos;
+      productos = backup.productos;
+      localStorage.setItem("sf_clientes", JSON.stringify(clientes));
+      localStorage.setItem("sf_pedidos", JSON.stringify(pedidos));
+      localStorage.setItem("sf_productos", JSON.stringify(productos));
+      showToast("✅ Backup restaurado — "+clientes.length+" clientes, "+pedidos.length+" pedidos");
+      setTimeout(function(){location.reload();}, 1500);
+    }catch(err){
+      showToast("❌ Error al leer el archivo");
+    }
+  };
+  reader.readAsText(file);
+}
+
 function syncPedido(p){
   saveLocal();
-  if(!ERP_SCRIPT_URL) return;
+  if(!ERP_SCRIPT_URL){ agregarAQueue("save","Pedidos",Object.assign({},p,{items:JSON.stringify(p.items),esPago:p.esPago?"true":"false"})); return; }
   setSyncStatus("syncing");
   var row=Object.assign({},p,{items:JSON.stringify(p.items),esPago:p.esPago?"true":"false"});
+  if(!navigator.onLine){
+    agregarAQueue("save","Pedidos",row);
+    showToast("📵 Sin internet — pedido guardado localmente");
+    setSyncStatus("local");
+    return;
+  }
   fetch(ERP_SCRIPT_URL,{method:"POST",body:JSON.stringify({action:"save",sheet:"Pedidos",row:row})})
-    .then(function(){setSyncStatus("ok");}).catch(function(){setSyncStatus("error");});
+    .then(function(r){return r.json();})
+    .then(function(res){
+      setSyncStatus("ok");
+      showToast("☁️ Pedido guardado en la nube ✅");
+    })
+    .catch(function(){
+      agregarAQueue("save","Pedidos",row);
+      showToast("📵 Sin conexión — se subirá cuando vuelva internet");
+      setSyncStatus("error");
+    });
 }
 
 function syncDeletePedido(id){
@@ -1364,25 +1576,64 @@ function renderAdmin(){
 // ===== VENDEDOR =====
 function hoyStr(){return new Date().toISOString().split("T")[0];}
 
+function onFiltroMobileChange(){
+  var val = document.getElementById("pedidosFiltroMobile").value;
+  var customDiv = document.getElementById("filtroFechaCustom");
+  if(customDiv) customDiv.style.display = val==="fecha" ? "block" : "none";
+  if(val !== "fecha") renderVendedor();
+}
+
+function getFiltroMobilePedidos(){
+  var filtroMobile=(document.getElementById("pedidosFiltroMobile")||{value:"hoy"}).value;
+  var misP = pedidos.filter(function(p){
+    if(p.esPago||p.total<=0) return false;
+    if(filtroMobile==="hoy") return p.fecha===hoyStr()&&p.vendedorId===1;
+    if(filtroMobile==="semana"){var d=(new Date(hoyStr())-new Date(p.fecha))/(864e5);return d>=0&&d<7&&p.vendedorId===1;}
+    if(filtroMobile==="mes"){var fp=new Date(p.fecha);var n=new Date();return fp.getMonth()===n.getMonth()&&fp.getFullYear()===n.getFullYear()&&p.vendedorId===1;}
+    if(filtroMobile==="fecha"){
+      var fechaEl=document.getElementById("pedidosFechaCustom");
+      var fechaSel=fechaEl?fechaEl.value:"";
+      return fechaSel&&p.fecha===fechaSel&&p.vendedorId===1;
+    }
+    return p.vendedorId===1;
+  });
+  return misP;
+}
+
 function calcTiempoRuta(vendedorId){
   var hoy=hoyStr();
   var pp=pedidos.filter(function(p){return p.fecha===hoy&&p.vendedorId===vendedorId&&!p.esPago&&p.total>0&&p.hora;});
   if(pp.length===0) return null;
   // Ordenar por hora
-  var horas=pp.map(function(p){
+  var sorted=pp.slice().sort(function(a,b){return a.hora.localeCompare(b.hora);});
+  var horas=sorted.map(function(p){
     var parts=p.hora.split(":");
     return parseInt(parts[0])*60+parseInt(parts[1]);
-  }).sort(function(a,b){return a-b;});
+  });
   var minutos=horas[horas.length-1]-horas[0];
   if(minutos<=0) return null;
   var h=Math.floor(minutos/60);
   var m=minutos%60;
+  // Calcular promedio entre clientes
+  var promedioEntre=null;
+  if(pp.length>1){
+    var sumaIntervalos=0;
+    for(var i=1;i<horas.length;i++){
+      sumaIntervalos+=(horas[i]-horas[i-1]);
+    }
+    var prom=Math.round(sumaIntervalos/(horas.length-1));
+    var ph=Math.floor(prom/60);
+    var pm=prom%60;
+    promedioEntre=(ph>0?ph+"h ":"")+pm+"min";
+  }
   return {
-    inicio:pp.sort(function(a,b){return a.hora.localeCompare(b.hora);})[0].hora,
-    fin:pp.sort(function(a,b){return b.hora.localeCompare(a.hora);})[0].hora,
+    inicio:sorted[0].hora,
+    fin:sorted[sorted.length-1].hora,
     horas:h, minutos:m,
     texto:(h>0?h+"h ":"")+m+"min",
-    totalMin:minutos
+    totalMin:minutos,
+    promedioEntre:promedioEntre,
+    cantPedidos:pp.length
   };
 }
 
@@ -1401,12 +1652,13 @@ function renderVendedor(){
   renderCercanos();
   renderAlertasRuta();
 
-  var mP=misP.slice().reverse();
-  document.getElementById("misPedidos").innerHTML=mP.length===0?'<div class="empty">Sin pedidos todavía — ¡a la calle! 🚀</div>':
+  // Usar filtro con fecha personalizada
+  var mP=getFiltroMobilePedidos().slice().reverse();
+  document.getElementById("misPedidos").innerHTML=mP.length===0?'<div class="empty">Sin pedidos para este período 📭</div>':
     mP.map(function(p){
       var cli=clientes.find(function(c){return c.id===p.clienteId;})||{nombre:"?"};
       return '<div class="pedido-row" onclick="abrirAccionesPedido('+p.id+')">'+
-        '<div><div class="ped-nombre">'+cli.nombre+'</div><div class="ped-meta">'+p.cobro+' · '+p.hora+'</div></div>'+
+        '<div><div class="ped-nombre">'+cli.nombre+'</div><div class="ped-meta">'+p.fecha+' · '+p.cobro+' · '+p.hora+'</div></div>'+
         '<div style="display:flex;align-items:center;gap:10px;">'+
           '<div class="ped-monto" style="color:var(--green);">'+peso(p.total)+'</div>'+
           '<span style="color:var(--muted);font-size:1rem;">›</span>'+
@@ -1755,18 +2007,33 @@ function renderProductos(){
   var valorVenta=productos.reduce(function(a,p){return a+(p.stock||0)*p.precio;},0);
   var gananciaStock=valorVenta-valorStock;
   document.getElementById("stockStats").innerHTML=
-    '<div class="stat-pill"><div class="val" style="color:var(--blue);">'+totalProds+'</div><div class="lbl">Productos</div></div>'+
-    '<div class="stat-pill"><div class="val red">'+stockBajoCount+'</div><div class="lbl">Stock bajo</div></div>'+
-    '<div class="stat-pill"><div class="val" style="color:var(--muted);">'+peso(valorStock)+'</div><div class="lbl">Val. costo</div></div>'+
-    '<div class="stat-pill"><div class="val green">'+peso(valorVenta)+'</div><div class="lbl">Val. venta</div></div>'+
-    '<div class="stat-pill"><div class="val blue">'+peso(gananciaStock)+'</div><div class="lbl">Ganancia pot.</div></div>';
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:4px 0;">'+
+      '<div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px 16px;display:flex;align-items:center;gap:12px;">'+
+        '<span style="font-size:1.6rem;">📦</span>'+
+        '<div><div style="font-family:\'Syne\',sans-serif;font-weight:900;font-size:1.6rem;color:var(--blue);line-height:1;">'+totalProds+'</div>'+
+        '<div style="font-size:0.7rem;color:var(--muted);margin-top:2px;text-transform:uppercase;letter-spacing:0.5px;">Productos</div></div>'+
+      '</div>'+
+      '<div style="background:var(--card);border:1px solid rgba(230,57,70,0.3);border-radius:14px;padding:14px 16px;display:flex;align-items:center;gap:12px;">'+
+        '<span style="font-size:1.6rem;">⚠️</span>'+
+        '<div><div style="font-family:\'Syne\',sans-serif;font-weight:900;font-size:1.6rem;color:var(--red);line-height:1;">'+stockBajoCount+'</div>'+
+        '<div style="font-size:0.7rem;color:var(--muted);margin-top:2px;text-transform:uppercase;letter-spacing:0.5px;">Stock bajo</div></div>'+
+      '</div>'+
+      '<div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px 16px;">'+
+        '<div style="font-size:0.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">Val. costo</div>'+
+        '<div style="font-family:\'Syne\',sans-serif;font-weight:900;font-size:1.2rem;color:var(--muted);">'+peso(valorStock)+'</div>'+
+      '</div>'+
+      '<div style="background:var(--card);border:1px solid rgba(46,194,126,0.3);border-radius:14px;padding:14px 16px;">'+
+        '<div style="font-size:0.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">Val. venta</div>'+
+        '<div style="font-family:\'Syne\',sans-serif;font-weight:900;font-size:1.2rem;color:var(--green);">'+peso(valorVenta)+'</div>'+
+      '</div>'+
+    '</div>';
 
   var esAdmin = usuarioActual && usuarioActual.rol==="admin";
   var inpStyle="width:100%;background:var(--dark3);border:1.5px solid var(--border);border-radius:8px;color:var(--text);font-family:'Inter',sans-serif;font-weight:700;font-size:0.92rem;padding:9px 10px;outline:none;text-align:right;";
 
-  // Mostrar/ocultar panel de admin — siempre re-evaluar
+  // Panel masivo siempre oculto
   var massPanel=document.getElementById("massUpdatePanel");
-  if(massPanel) massPanel.style.cssText=esAdmin?"margin:10px 14px;background:var(--card);border-radius:14px;border:1px solid rgba(244,160,32,0.3);padding:14px;display:block":"display:none";
+  if(massPanel) massPanel.style.display="none";
   var btnGuardar=document.getElementById("btnGuardarStock");
   if(btnGuardar) btnGuardar.style.display=esAdmin?"inline-block":"none";
 
@@ -1804,10 +2071,6 @@ function renderProductos(){
               )+
             '</div>'+
           '</div>'+
-          '<div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">'+
-            '<span style="font-size:0.75rem;font-weight:700;color:'+stockColor+';">📦 '+stock+'u</span>'+
-            (bajo?'<span style="font-size:0.62rem;background:rgba(244,197,66,0.15);color:var(--yellow);padding:1px 6px;border-radius:4px;font-weight:700;">⚠️</span>':'')+
-          '</div>'+
         '</div>'+
         (esAdmin ?
           '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-bottom:10px;">'+
@@ -1828,9 +2091,7 @@ function renderProductos(){
             '</div>'+
             '<div>'+
               '<div style="font-size:0.62rem;color:'+stockColor+';margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;font-weight:700;">📦 Stock'+(bajo?' ⚠️':'')+'</div>'+
-              '<input type="number" value="'+stock+'" style="'+inpStyle+';color:'+stockColor+';" '+
-                'onchange="actualizarPrecio('+p.id+',\'stock\',this.value)" '+
-                'onblur="actualizarPrecio('+p.id+',\'stock\',this.value)">'+
+              '<div style="'+inpStyle+';background:rgba(255,255,255,0.03);color:'+stockColor+';">'+stock+'</div>'+
             '</div>'+
           '</div>'+
           '<div style="font-size:0.78rem;color:var(--muted);padding-top:8px;border-top:1px solid var(--border);">'+
@@ -2524,6 +2785,16 @@ function verificarPin(){
     if(IS_DESKTOP) initDesktop();
     // Arrancar sync automático
     if(ERP_SCRIPT_URL) iniciarSyncAutomatico();
+    // Procesar cola offline pendiente
+    if(offlineQueue.length > 0){
+      showToast("📤 Subiendo "+offlineQueue.length+" pedido(s) pendiente(s)...");
+      setTimeout(procesarQueue, 2000);
+    }
+    // Mostrar estado de queue en admin
+    setTimeout(function(){
+      var qDiv = document.getElementById("queueStatus");
+      if(qDiv) qDiv.textContent = offlineQueue.length > 0 ? "⏳ "+offlineQueue.length+" pedido(s) pendiente(s) de subir" : "✅ Todo sincronizado";
+    }, 500);
   } else {
     document.getElementById("pinError").textContent="PIN incorrecto ❌";
     pinActual=""; actualizarDots();
@@ -2855,12 +3126,29 @@ var gastosHoy = [];
 
 function abrirCierreRuta(){
   gastosHoy = [];
+  // Setear la fecha de hoy en el selector
+  var dateInput = document.getElementById("cierreFechaSelect");
+  if(dateInput) dateInput.value = hoyStr();
   renderCierre();
   document.getElementById("cierreOverlay").classList.add("active");
 }
 
-function renderCierre(){
-  var misP = pedidos.filter(function(p){return p.fecha===hoyStr()&&p.vendedorId===1&&!p.esPago&&p.total>0;});
+function renderCierreRuta(){
+  // Llamada cuando cambia la fecha del selector
+  var dateInput = document.getElementById("cierreFechaSelect");
+  var fecha = dateInput ? dateInput.value : hoyStr();
+  var esHoy = fecha === hoyStr();
+  // Para fechas anteriores no mostrar gastos editables
+  renderCierre(fecha);
+  // Ocultar sección de gastos para fechas anteriores
+  var gastosSection = document.querySelector("#cierreOverlay .gastos-section");
+  if(gastosSection) gastosSection.style.display = esHoy ? "block" : "none";
+}
+
+function renderCierre(fechaParam){
+  var fecha = fechaParam || (document.getElementById("cierreFechaSelect")||{value:hoyStr()}).value || hoyStr();
+  var esHoy = fecha === hoyStr();
+  var misP = pedidos.filter(function(p){return p.fecha===fecha&&p.vendedorId===1&&!p.esPago&&p.total>0;});
   var efectivo=0, transferencia=0, ctacte=0, ganancia=0;
   misP.forEach(function(p){
     if(p.cobro==="efectivo") efectivo+=p.total;
@@ -2966,6 +3254,7 @@ function enviarCierreWA(){
     "Vendedor: *"+vendedores[0].nombre+"*\n"+
     "Fecha: *"+hoyStr()+"*\n"+
     (tRuta?"⏱️ Tiempo en ruta: *"+tRuta.texto+"* ("+tRuta.inicio+" → "+tRuta.fin+")\n":"")+
+    (tRuta&&tRuta.promedioEntre?"🚚 Promedio entre clientes: *"+tRuta.promedioEntre+"*\n":"")+
     "─────────────────\n"+
     "📦 Pedidos: *"+misP.length+"*\n"+
     "💰 Total vendido: *"+peso(totalVentas)+"*\n"+
@@ -2978,7 +3267,6 @@ function enviarCierreWA(){
     "Total gastos: "+peso(totalGastos)+"\n"+
     "─────────────────\n"+
     "💵 *Efectivo a rendir: "+peso(netoEfectivo)+"*\n"+
-    "📈 *Ganancia del día: "+peso(ganancia)+"*\n"+
     "─────────────────\n"+
     "✅ Cierre enviado desde Foco Ventas";
 
@@ -2986,7 +3274,6 @@ function enviarCierreWA(){
   window.open("https://wa.me/543512427947?text="+encodeURIComponent(msg),"_blank");
 }
 // ===== DESKTOP RENDERING =====
-var IS_DESKTOP = window.innerWidth >= 900;
 
 function initLayout(){
   if(IS_DESKTOP){
@@ -3984,7 +4271,10 @@ window.addEventListener("resize", function(){
 <div class="overlay" id="cierreOverlay">
   <div class="sheet" style="max-height:95vh;">
     <div class="sheet-handle"></div>
-    <div class="sheet-title">🏁 Cierre de ruta — <span id="cierreVendNombre"></span></div>
+    <div class="sheet-title" style="display:flex;justify-content:space-between;align-items:center;padding-right:18px;">
+      <span>🏁 Cierre — <span id="cierreVendNombre"></span></span>
+      <input type="date" id="cierreFechaSelect" onchange="renderCierreRuta()" style="padding:5px 8px;background:var(--dark3);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:0.75rem;outline:none;">
+    </div>
 
     <!-- RESUMEN -->
     <div style="padding:14px 18px;border-bottom:1px solid var(--border);">
@@ -3999,7 +4289,7 @@ window.addEventListener("resize", function(){
     </div>
 
     <!-- GASTOS -->
-    <div style="padding:14px 18px;border-bottom:1px solid var(--border);">
+    <div class="gastos-section" style="padding:14px 18px;border-bottom:1px solid var(--border);">
       <div style="font-size:0.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;font-weight:700;">Gastos del día</div>
       <div id="gastosList" style="margin-bottom:10px;"></div>
       <div style="display:flex;gap:8px;">
@@ -4076,6 +4366,75 @@ window.addEventListener("resize", function(){
         <div><div style="font-family:'Syne',sans-serif;font-weight:700;font-size:1rem;">Ticket 58mm</div><div style="font-size:0.78rem;color:var(--muted);margin-top:2px;">Ticket compacto · Impresora térmica</div></div>
       </button>
       <button onclick="document.getElementById('ticketFormatoOverlay').classList.remove('active')" style="padding:12px;border-radius:12px;border:1.5px solid var(--border);background:none;color:var(--muted);font-size:0.9rem;cursor:pointer;">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL NUEVO PRODUCTO -->
+<div class="overlay" id="nuevoProdOverlay" style="z-index:400;">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">➕ Nuevo producto</div>
+    <div style="padding:0 18px 20px;display:flex;flex-direction:column;gap:12px;">
+      <div>
+        <div style="font-size:0.72rem;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px;">Nombre</div>
+        <input type="text" id="npNombre" placeholder="Ej: Pan lactal grande" style="width:100%;padding:12px 14px;background:var(--dark3);border:1.5px solid var(--border);border-radius:10px;color:var(--text);font-size:0.95rem;font-family:'DM Sans',sans-serif;outline:none;box-sizing:border-box;">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div>
+          <div style="font-size:0.72rem;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px;">Costo $</div>
+          <input type="number" id="npCosto" placeholder="0" inputmode="numeric" oninput="calcMargenNuevo()" style="width:100%;padding:12px 14px;background:var(--dark3);border:1.5px solid rgba(230,57,70,0.4);border-radius:10px;color:var(--text);font-size:1rem;font-family:'Syne',sans-serif;font-weight:700;outline:none;box-sizing:border-box;">
+        </div>
+        <div>
+          <div style="font-size:0.72rem;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px;">Precio $</div>
+          <input type="number" id="npPrecio" placeholder="0" inputmode="numeric" oninput="calcMargenNuevo()" style="width:100%;padding:12px 14px;background:var(--dark3);border:1.5px solid rgba(46,194,126,0.4);border-radius:10px;color:var(--text);font-size:1rem;font-family:'Syne',sans-serif;font-weight:700;outline:none;box-sizing:border-box;">
+        </div>
+      </div>
+      <div style="text-align:center;font-size:0.85rem;font-weight:700;" id="npMargenLabel" style="color:var(--muted);">— margen</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div>
+          <div style="font-size:0.72rem;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px;">Marca</div>
+          <select id="npMarca" style="width:100%;padding:12px 14px;background:var(--dark3);border:1.5px solid var(--border);border-radius:10px;color:var(--text);font-size:0.88rem;outline:none;"></select>
+        </div>
+        <div>
+          <div style="font-size:0.72rem;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px;">Categoría</div>
+          <select id="npCategoria" style="width:100%;padding:12px 14px;background:var(--dark3);border:1.5px solid var(--border);border-radius:10px;color:var(--text);font-size:0.88rem;outline:none;"></select>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:0.72rem;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px;">Stock inicial</div>
+        <input type="number" id="npStock" value="0" inputmode="numeric" style="width:100%;padding:12px 14px;background:var(--dark3);border:1.5px solid var(--border);border-radius:10px;color:var(--text);font-size:1rem;font-family:'Syne',sans-serif;font-weight:700;outline:none;box-sizing:border-box;">
+      </div>
+      <button onclick="confirmarNuevoProd()" style="padding:15px;background:var(--green);color:black;border:none;border-radius:12px;font-family:'Syne',sans-serif;font-weight:800;font-size:1rem;cursor:pointer;">✅ Crear producto</button>
+      <button onclick="document.getElementById('nuevoProdOverlay').classList.remove('active')" style="padding:12px;border-radius:12px;border:1.5px solid var(--border);background:none;color:var(--muted);font-size:0.9rem;cursor:pointer;">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL GESTIÓN CATEGORÍAS Y MARCAS -->
+<div class="overlay" id="gestionCatsOverlay" style="z-index:400;">
+  <div class="sheet" style="max-height:90vh;overflow-y:auto;">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">⚙️ Marcas y Categorías</div>
+    <div style="padding:0 18px 24px;">
+
+      <!-- MARCAS -->
+      <div style="font-size:0.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:1px;font-weight:700;margin-bottom:10px;">Marcas</div>
+      <div id="listaMarcas"></div>
+      <div style="display:flex;gap:8px;margin-top:10px;margin-bottom:20px;">
+        <input type="text" id="nuevaMarcaInput" placeholder="Nueva marca..." style="flex:1;padding:10px 12px;background:var(--dark3);border:1.5px solid var(--border);border-radius:10px;color:var(--text);font-size:0.88rem;outline:none;">
+        <button onclick="agregarMarca()" style="padding:10px 16px;background:var(--blue);color:white;border:none;border-radius:10px;font-weight:700;cursor:pointer;font-size:0.9rem;">+ Agregar</button>
+      </div>
+
+      <!-- CATEGORÍAS -->
+      <div style="font-size:0.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:1px;font-weight:700;margin-bottom:10px;">Categorías</div>
+      <div id="listaCategorias"></div>
+      <div style="display:flex;gap:8px;margin-top:10px;margin-bottom:20px;">
+        <input type="text" id="nuevaCatInput" placeholder="Nueva categoría..." style="flex:1;padding:10px 12px;background:var(--dark3);border:1.5px solid var(--border);border-radius:10px;color:var(--text);font-size:0.88rem;outline:none;">
+        <button onclick="agregarCategoria()" style="padding:10px 16px;background:var(--blue);color:white;border:none;border-radius:10px;font-weight:700;cursor:pointer;font-size:0.9rem;">+ Agregar</button>
+      </div>
+
+      <button onclick="document.getElementById('gestionCatsOverlay').classList.remove('active')" style="width:100%;padding:13px;border-radius:12px;border:1.5px solid var(--border);background:none;color:var(--muted);font-size:0.9rem;cursor:pointer;">Cerrar</button>
     </div>
   </div>
 </div>
@@ -4218,6 +4577,8 @@ window.addEventListener("resize", function(){
 </div>
 
 <script>
+document.getElementById("nuevoProdOverlay").addEventListener("click",function(e){if(e.target===this)this.classList.remove("active");});
+document.getElementById("gestionCatsOverlay").addEventListener("click",function(e){if(e.target===this)this.classList.remove("active");});
 document.getElementById("ticketFormatoOverlay").addEventListener("click",function(e){if(e.target===this)this.classList.remove("active");});
 document.getElementById("editProdOverlay").addEventListener("click",function(e){if(e.target===this)cerrarEditProd();});
 document.getElementById("cargaStockOverlay").addEventListener("click",function(e){if(e.target===this)cerrarCargaStock();});
