@@ -717,14 +717,15 @@ h1,h2,h3,.syne{font-family:'Syne',sans-serif;}
   <!-- BACKUP -->
   <div style="margin:0 14px 30px;background:var(--card);border-radius:14px;border:1px solid var(--border);padding:16px;">
     <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.8rem;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:12px;">💾 Backup de datos</div>
-    <div style="display:flex;gap:8px;">
+    <div style="display:flex;gap:8px;margin-bottom:8px;">
       <button onclick="exportarBackup()" style="flex:1;padding:11px;background:rgba(74,158,255,0.1);border:1.5px solid rgba(74,158,255,0.3);color:var(--blue);border-radius:10px;font-weight:700;font-size:0.85rem;cursor:pointer;">⬇️ Exportar</button>
       <label style="flex:1;padding:11px;background:rgba(46,194,126,0.1);border:1.5px solid rgba(46,194,126,0.3);color:var(--green);border-radius:10px;font-weight:700;font-size:0.85rem;cursor:pointer;text-align:center;">
         ⬆️ Restaurar
         <input type="file" accept=".json" onchange="importarBackup(this.files[0])" style="display:none;">
       </label>
     </div>
-    <div id="queueStatus" style="font-size:0.72rem;color:var(--muted);margin-top:10px;text-align:center;"></div>
+    <button onclick="forzarSyncTotal()" style="width:100%;padding:11px;background:rgba(244,160,32,0.1);border:1.5px solid rgba(244,160,32,0.3);color:var(--orange);border-radius:10px;font-weight:700;font-size:0.85rem;cursor:pointer;margin-bottom:8px;">☁️ Forzar sync al Sheet</button>
+    <div id="queueStatus" style="font-size:0.72rem;color:var(--muted);text-align:center;"></div>
   </div>
 </div>
 
@@ -1351,6 +1352,42 @@ window.addEventListener("offline", function(){
 });
 
 // ===== BACKUP Y RESTAURACIÓN =====
+function forzarSyncTotal(){
+  if(!ERP_SCRIPT_URL){showToast("⚠️ No hay URL del ERP configurada");return;}
+  var qDiv=document.getElementById("queueStatus");
+  if(qDiv) qDiv.textContent="⏳ Subiendo todo al Sheet...";
+  setSyncStatus("syncing");
+  showToast("☁️ Sincronizando todo...");
+
+  // Subir clientes
+  var cliRows=clientes.map(function(c){return Object.assign({},c,{marcas:c.marcas.join(",")});});
+  // Subir pedidos
+  var pedRows=pedidos.map(function(p){return Object.assign({},p,{items:JSON.stringify(p.items),esPago:p.esPago?"true":"false"});});
+  // Subir productos
+  var prodRows=productos.map(function(p){return{id:p.id,nombre:p.nombre,marca:p.marca,rubro:p.rubro,costo:p.costo,precio:p.precio,stock:p.stock||0,minStock:p.minStock||3};});
+
+  var promises=[
+    fetch(ERP_SCRIPT_URL,{method:"POST",body:JSON.stringify({action:"clearAndSave",sheet:"Clientes",rows:cliRows})}),
+    fetch(ERP_SCRIPT_URL,{method:"POST",body:JSON.stringify({action:"clearAndSave",sheet:"Pedidos",rows:pedRows})}),
+    fetch(ERP_SCRIPT_URL,{method:"POST",body:JSON.stringify({action:"clearAndSave",sheet:"Productos",rows:prodRows})})
+  ];
+
+  Promise.all(promises)
+    .then(function(){
+      setSyncStatus("ok");
+      offlineQueue=[];
+      guardarQueue();
+      var msg="✅ Sync completo: "+clientes.length+" clientes, "+pedidos.length+" pedidos, "+productos.length+" productos";
+      showToast(msg);
+      if(qDiv) qDiv.textContent=msg;
+    })
+    .catch(function(err){
+      setSyncStatus("error");
+      showToast("❌ Error al sincronizar — revisá la conexión");
+      if(qDiv) qDiv.textContent="❌ Error de sync";
+    });
+}
+
 function exportarBackup(){
   var backup = {
     version: 2,
