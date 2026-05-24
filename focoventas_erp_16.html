@@ -1920,7 +1920,7 @@ function setCobro(btn,tipo){
 function confirmarPedido(){
   if(!pedidoActual.total||pedidoActual.total===0){showToast("⚠️ Agregá al menos un producto");return;}
 
-  // Validar stock disponible
+  // Validar stock disponible — avisar pero no bloquear
   var sinStock=[];
   Object.keys(pedidoActual.items).forEach(function(id){
     var qty=pedidoActual.items[id]; if(!qty||qty<=0) return;
@@ -1928,7 +1928,7 @@ function confirmarPedido(){
     if(p && (p.stock||0)<qty) sinStock.push(p.nombre+" (stock: "+(p.stock||0)+", pedido: "+qty+")");
   });
   if(sinStock.length>0){
-    if(!confirm("⚠️ Stock insuficiente:\n"+sinStock.join("\n")+"\n\n¿Confirmar igual?")) return;
+    if(!confirm("⚠️ Stock insuficiente:\n"+sinStock.join("\n")+"\n\n¿Confirmar igual? (quedará en negativo)")) return;
   }
   var pedido={
     id:Date.now(),clienteId:pedidoActual.clienteId,vendedorId:1,
@@ -2422,7 +2422,7 @@ confirmarPedido=function(){
     Object.keys(pedidoActual.items).forEach(function(id){
       var qty=pedidoActual.items[id]; if(!qty) return;
       var p=productos.find(function(x){return x.id===parseInt(id);});
-      if(p) p.stock=Math.max(0,(p.stock||0)-qty);
+      if(p) p.stock=(p.stock||0)-qty;
     });
     localStorage.setItem("sf_productos",JSON.stringify(productos));
   }
