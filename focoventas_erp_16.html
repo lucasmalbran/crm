@@ -3424,30 +3424,26 @@ function quitarGasto(idx){
 }
 
 function enviarCierreWA(){
-  var filtroMobile=(document.getElementById("pedidosFiltroMobile")||{value:"hoy"}).value;
+  var fecha = (document.getElementById("cierreFechaSelect")||{value:hoyStr()}).value || hoyStr();
   var misP=pedidos.filter(function(p){
     if(p.esPago||p.total<=0) return false;
-    if(filtroMobile==="hoy") return p.fecha===hoyStr()&&p.vendedorId===1;
-    if(filtroMobile==="semana"){var d=(new Date(hoyStr())-new Date(p.fecha))/(864e5);return d>=0&&d<7&&p.vendedorId===1;}
-    if(filtroMobile==="mes"){var fp=new Date(p.fecha);var n=new Date();return fp.getMonth()===n.getMonth()&&fp.getFullYear()===n.getFullYear()&&p.vendedorId===1;}
-    return p.vendedorId===1;
+    var pFecha=p.fecha?String(p.fecha).split("T")[0]:"";
+    return pFecha===fecha && p.vendedorId===1;
   });
-  var efectivo=0,transferencia=0,ctacte=0,ganancia=0;
+  var efectivo=0,transferencia=0,ctacte=0;
   misP.forEach(function(p){
     if(p.cobro==="efectivo")efectivo+=p.total;
     else if(p.cobro==="transferencia")transferencia+=p.total;
     else if(p.cobro==="ctacte")ctacte+=p.total;
-    ganancia+=p.ganancia||0;
   });
   var totalVentas=efectivo+transferencia+ctacte;
   var totalGastos=gastosHoy.reduce(function(a,g){return a+g.monto;},0);
   var netoEfectivo=Math.max(0,efectivo-totalGastos);
   var gastosStr=gastosHoy.length===0?"Sin gastos":gastosHoy.map(function(g){return"• "+g.desc+": "+peso(g.monto);}).join("\n");
-
-  var tRuta=calcTiempoRuta(1);
+  var tRuta=calcTiempoRuta(1, fecha);
   var msg="🏁 *CIERRE DE RUTA — FOCO VENTAS*\n"+
     "Vendedor: *"+vendedores[0].nombre+"*\n"+
-    "Fecha: *"+hoyStr()+"*\n"+
+    "Fecha: *"+fecha+"*\n"+
     (tRuta?"⏱️ Tiempo en ruta: *"+tRuta.texto+"* ("+tRuta.inicio+" → "+tRuta.fin+")\n":"")+
     (tRuta&&tRuta.promedioEntre?"🚚 Promedio entre clientes: *"+tRuta.promedioEntre+"*\n":"")+
     "─────────────────\n"+
@@ -3464,16 +3460,12 @@ function enviarCierreWA(){
     "💵 *Efectivo a rendir: "+peso(netoEfectivo)+"*\n"+
     "─────────────────\n"+
     "✅ Cierre enviado desde Foco Ventas";
-
-  // Agregar clientes con deuda si los hay
   var conDeuda = clientes.filter(function(c){return (c.saldo||0)>0;});
   if(conDeuda.length>0){
     msg += "\n\n📒 *Cuentas corrientes pendientes:*\n"+
       conDeuda.map(function(c){return "• "+c.nombre+": "+peso(c.saldo);}).join("\n")+
       "\n*Total adeudado: "+peso(conDeuda.reduce(function(a,c){return a+(c.saldo||0);},0))+"*";
   }
-
-  // Número del admin
   window.open("https://wa.me/543512427947?text="+encodeURIComponent(msg),"_blank");
 }
 // ===== DESKTOP RENDERING =====
@@ -4029,31 +4021,36 @@ function eliminarVendedor(){
 }
 
 function imprimirCierrePDF(){
-  var misP=pedidos.filter(function(p){return p.fecha===hoyStr()&&p.vendedorId===1&&!p.esPago&&p.total>0;});
-  var efectivo=0,transferencia=0,ctacte=0,ganancia=0;
-  misP.forEach(function(p){if(p.cobro==="efectivo")efectivo+=p.total;else if(p.cobro==="transferencia")transferencia+=p.total;else ctacte+=p.total;ganancia+=p.ganancia||0;});
+  var fecha=(document.getElementById("cierreFechaSelect")||{value:hoyStr()}).value||hoyStr();
+  var misP=pedidos.filter(function(p){
+    var pFecha=p.fecha?String(p.fecha).split("T")[0]:"";
+    return pFecha===fecha&&p.vendedorId===1&&!p.esPago&&p.total>0;
+  });
+  var efectivo=0,transferencia=0,ctacte=0;
+  misP.forEach(function(p){if(p.cobro==="efectivo")efectivo+=p.total;else if(p.cobro==="transferencia")transferencia+=p.total;else ctacte+=p.total;});
   var totalVentas=efectivo+transferencia+ctacte;
   var totalGastos=gastosHoy.reduce(function(a,g){return a+g.monto;},0);
   var netoEfectivo=Math.max(0,efectivo-totalGastos);
-  var tRuta=calcTiempoRuta(1);
+  var tRuta=calcTiempoRuta(1,fecha);
+  var conDeuda=clientes.filter(function(c){return (c.saldo||0)>0;});
 
-  var html='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Cierre de Ruta '+hoyStr()+'</title>'+
+  var html='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Cierre de Ruta '+fecha+'</title>'+
   '<style>@page{size:A4;margin:20mm 25mm;}body{font-family:Arial,sans-serif;color:#111;font-size:13px;}'+
   'h1{font-size:22px;font-weight:900;margin:0 0 4px;}.sub{color:#888;font-size:12px;margin-bottom:20px;}'+
   '.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;}'+
   '.card{background:#f8f8f8;border-radius:8px;padding:14px;text-align:center;}'+
   '.card .val{font-size:20px;font-weight:900;}.card .lbl{font-size:11px;color:#888;margin-top:4px;}'+
   '.sec{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#888;margin:16px 0 8px;}'+
-  'table{width:100%;border-collapse:collapse;}.tr{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #eee;}'+
+  '.tr{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #eee;}'+
   '.total-box{background:#111;color:white;border-radius:8px;padding:14px;display:flex;justify-content:space-between;margin-top:12px;}'+
   '.no-print{display:none;}@media print{.no-print{display:none!important;}}'+
   '</style></head><body>'+
   '<h1>🏁 Cierre de Ruta</h1>'+
-  '<div class="sub">'+vendedores[0].nombre+' · '+hoyStr()+(tRuta?' · ⏱️ '+tRuta.texto:'')+'</div>'+
+  '<div class="sub">'+vendedores[0].nombre+' · '+fecha+(tRuta?' · ⏱️ '+tRuta.texto:'')+'</div>'+
   '<div class="grid">'+
     '<div class="card"><div class="val" style="color:#16a34a;">'+peso(totalVentas)+'</div><div class="lbl">Total vendido</div></div>'+
-    '<div class="card"><div class="val" style="color:#2563eb;">'+peso(ganancia)+'</div><div class="lbl">Ganancia</div></div>'+
     '<div class="card"><div class="val">'+misP.length+'</div><div class="lbl">Pedidos</div></div>'+
+    '<div class="card"><div class="val" style="color:#2563eb;">'+peso(efectivo)+'</div><div class="lbl">Efectivo</div></div>'+
     '<div class="card"><div class="val" style="color:#dc2626;">'+peso(totalGastos)+'</div><div class="lbl">Gastos</div></div>'+
   '</div>'+
   '<div class="sec">Desglose de cobros</div>'+
@@ -4062,20 +4059,15 @@ function imprimirCierrePDF(){
   '<div class="tr"><span>📒 Cuenta Corriente</span><strong>'+peso(ctacte)+'</strong></div>'+
   (gastosHoy.length>0?'<div class="sec">Gastos del día</div>'+gastosHoy.map(function(g){return '<div class="tr"><span>'+g.desc+'</span><strong>'+peso(g.monto)+'</strong></div>';}).join(""):'')+
   '<div class="total-box"><span style="font-weight:700;">💵 Efectivo a rendir</span><strong>'+peso(netoEfectivo)+'</strong></div>'+
-  '<br><button class="no-print" onclick="window.print()">Imprimir / Guardar PDF</button>'+
+  (conDeuda.length>0?
+    '<div class="sec">Cuentas corrientes pendientes</div>'+
+    conDeuda.map(function(c){return '<div class="tr"><span>'+c.nombre+'</span><strong style="color:#dc2626;">'+peso(c.saldo)+'</strong></div>';}).join("")+
+    '<div class="tr"><span style="font-weight:700;">Total adeudado</span><strong style="color:#dc2626;">'+peso(conDeuda.reduce(function(a,c){return a+c.saldo;},0))+'</strong></div>'
+  :'')+
+  '<br><button class="no-print" onclick="window.print()" style="padding:12px 20px;background:#111;color:white;border:none;border-radius:8px;cursor:pointer;font-size:14px;font-weight:700;">🖨️ Imprimir / Guardar PDF</button>'+
   '</body></html>';
 
-  if(ERP_SCRIPT_URL){
-    setSyncStatus("syncing");
-    var nombre="Cierre-Ruta-"+vendedores[0].nombre.replace(/\s+/g,"-")+"-"+hoyStr();
-    fetch(ERP_SCRIPT_URL,{method:"POST",body:JSON.stringify({action:"saveCierre",html:html,nombre:nombre})})
-    .then(function(r){return r.json();})
-    .then(function(res){
-      setSyncStatus("ok");
-      if(res.ok && res.url){ window.open(res.url,"_blank"); showToast("📄 Cierre guardado en Drive"); }
-      else { abrirVentanaPDF(html, 800, 700); }
-    }).catch(function(){ setSyncStatus("error"); abrirVentanaPDF(html, 800, 700); });
-  } else { abrirVentanaPDF(html, 800, 700); }
+  abrirVentanaPDF(html, 800, 700);
 }
 
 function imprimirCierreMensualPDF(){
