@@ -1264,51 +1264,75 @@ function conectarERP(){
 function cargarDesdeSheets(){
   if(!ERP_SCRIPT_URL){setSyncStatus("local");return;}
   setSyncStatus("syncing");
+
+  var cargados = 0;
+  function checkDone(){
+    cargados++;
+    if(cargados>=3){
+      setSyncStatus("ok");
+      localStorage.setItem("sf_clientes",JSON.stringify(clientes));
+      localStorage.setItem("sf_pedidos",JSON.stringify(pedidos));
+      localStorage.setItem("sf_productos",JSON.stringify(productos));
+      // Rerenderizar la pantalla activa
+      if(usuarioActual){
+        if(usuarioActual.rol==="admin") renderAdmin();
+        else renderVendedor();
+        renderProductos();
+      }
+    }
+  }
+
   // Cargar clientes
   fetch(ERP_SCRIPT_URL+"?action=getAll&sheet=Clientes")
     .then(function(r){return r.json();})
     .then(function(res){
-      if(res.ok && res.data.length>0){
+      if(res.ok && res.data && res.data.length>0){
         clientes=res.data.map(function(c){
           c.marcas=typeof c.marcas==="string"?c.marcas.split(",").filter(Boolean):(c.marcas||[]);
           c.id=Number(c.id); c.saldo=Number(c.saldo)||0;
           c.lat=Number(c.lat)||0; c.lng=Number(c.lng)||0;
           return c;
         });
-        localStorage.setItem("sf_clientes",JSON.stringify(clientes));
       }
-    }).catch(function(){});
+      checkDone();
+    }).catch(function(){checkDone();});
+
   // Cargar pedidos
   fetch(ERP_SCRIPT_URL+"?action=getAll&sheet=Pedidos")
     .then(function(r){return r.json();})
     .then(function(res){
-      if(res.ok && res.data.length>0){
+      if(res.ok && res.data && res.data.length>0){
         pedidos=res.data.map(function(p){
           p.id=Number(p.id);
           p.clienteId=Number(p.clienteId);
+          p.vendedorId=Number(p.vendedorId)||1;
           p.total=Number(p.total)||0;
           p.ganancia=Number(p.ganancia)||0;
           p.esPago=p.esPago==="true"||p.esPago===true;
-          try{p.items=typeof p.items==="string"?JSON.parse(p.items):p.items;}catch(e){p.items={};}
+          try{p.items=typeof p.items==="string"?JSON.parse(p.items):(p.items||{});}catch(e){p.items={};}
           return p;
         });
-        localStorage.setItem("sf_pedidos",JSON.stringify(pedidos));
       }
-    }).catch(function(){});
-  // Cargar productos (para tener stock actualizado)
+      checkDone();
+    }).catch(function(){checkDone();});
+
+  // Cargar productos
   fetch(ERP_SCRIPT_URL+"?action=getAll&sheet=Productos")
     .then(function(r){return r.json();})
     .then(function(res){
-      if(res.ok && res.data.length>0){
+      if(res.ok && res.data && res.data.length>0){
         res.data.forEach(function(row){
           var p=productos.find(function(x){return x.id===Number(row.id);});
-          if(p){p.stock=Number(row.stock)||0;p.costo=Number(row.costo)||p.costo;p.precio=Number(row.precio)||p.precio;p.minStock=Number(row.minStock)||3;}
+          if(p){
+            p.stock=Number(row.stock)||0;
+            p.costo=Number(row.costo)||p.costo;
+            p.precio=Number(row.precio)||p.precio;
+            p.minStock=Number(row.minStock)||3;
+          }
         });
-        localStorage.setItem("sf_productos",JSON.stringify(productos));
       }
-      setSyncStatus("ok");
-      renderAdmin();
-    }).catch(function(){setSyncStatus("error");});
+      checkDone();
+    }).catch(function(){checkDone();});
 }
 
 // ===== COLA OFFLINE =====
