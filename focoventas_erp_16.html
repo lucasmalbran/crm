@@ -1440,27 +1440,19 @@ function importarBackup(file){
 
 function erpFetch(body, onSuccess, onError){
   if(!ERP_SCRIPT_URL){ if(onError) onError("Sin URL"); return; }
-  // Apps Script requiere este approach para evitar CORS
-  fetch(ERP_SCRIPT_URL, {
-    method: "POST",
-    headers: {"Content-Type": "text/plain"},
-    body: JSON.stringify(body)
-  })
-  .then(function(r){ return r.json(); })
-  .then(function(d){ if(onSuccess) onSuccess(d); })
-  .catch(function(e){
-    // Fallback: usar fetch con no-cors (no podemos leer la respuesta pero el dato se guarda)
-    fetch(ERP_SCRIPT_URL, {
-      method: "POST",
-      mode: "no-cors",
-      headers: {"Content-Type": "text/plain"},
-      body: JSON.stringify(body)
-    }).then(function(){
-      if(onSuccess) onSuccess({ok:true});
-    }).catch(function(e2){
-      if(onError) onError(e2);
+  // Usamos GET con payload para evitar CORS (Apps Script solo permite CORS en GET)
+  var payloadStr = encodeURIComponent(JSON.stringify(body));
+  var url = ERP_SCRIPT_URL + "?payload=" + payloadStr;
+  fetch(url)
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      if(d && d.ok !== false){ if(onSuccess) onSuccess(d); }
+      else{ if(onError) onError(d.error || "Error"); }
+    })
+    .catch(function(e){
+      console.error("erpFetch error:", e);
+      if(onError) onError(e);
     });
-  });
 }
 
 function syncPedido(p){
