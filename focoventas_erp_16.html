@@ -1359,37 +1359,53 @@ function actualizarURLERP(){
 function forzarSyncTotal(){
   if(!ERP_SCRIPT_URL){showToast("⚠️ No hay URL del ERP configurada");return;}
   var qDiv=document.getElementById("queueStatus");
-  if(qDiv) qDiv.textContent="⏳ Subiendo todo al Sheet...";
+  if(qDiv) qDiv.textContent="⏳ Sincronizando...";
   setSyncStatus("syncing");
-  showToast("☁️ Sincronizando todo...");
+  showToast("☁️ Sincronizando...");
+
+  var total = clientes.length + pedidos.length + productos.length;
+  var done = 0;
+  var errors = 0;
+
+  function tick(ok){
+    done++;
+    if(!ok) errors++;
+    if(done === total){
+      if(errors===0){
+        setSyncStatus("ok");
+        var msg="✅ Sync completo: "+clientes.length+" clientes, "+pedidos.length+" pedidos, "+productos.length+" productos";
+        showToast(msg);
+        if(qDiv) qDiv.textContent=msg;
+      } else {
+        setSyncStatus("error");
+        if(qDiv) qDiv.textContent="⚠️ "+errors+" errores de "+total+" registros";
+      }
+    }
+  }
 
   // Subir clientes
-  var cliRows=clientes.map(function(c){return Object.assign({},c,{marcas:c.marcas.join(",")});});
+  clientes.forEach(function(c){
+    var row=Object.assign({},c,{marcas:c.marcas.join(",")});
+    erpFetch({action:"save",sheet:"Clientes",row:row},
+      function(){tick(true);}, function(){tick(false);}
+    );
+  });
+
   // Subir pedidos
-  var pedRows=pedidos.map(function(p){return Object.assign({},p,{items:JSON.stringify(p.items),esPago:p.esPago?"true":"false"});});
+  pedidos.forEach(function(p){
+    var row=Object.assign({},p,{items:JSON.stringify(p.items),esPago:p.esPago?"true":"false"});
+    erpFetch({action:"save",sheet:"Pedidos",row:row},
+      function(){tick(true);}, function(){tick(false);}
+    );
+  });
+
   // Subir productos
-  var prodRows=productos.map(function(p){return{id:p.id,nombre:p.nombre,marca:p.marca,rubro:p.rubro,costo:p.costo,precio:p.precio,stock:p.stock||0,minStock:p.minStock||3};});
-
-  var promises=[
-    new Promise(function(res,rej){ erpFetch({action:"clearAndSave",sheet:"Clientes",rows:cliRows}, res, rej); }),
-    new Promise(function(res,rej){ erpFetch({action:"clearAndSave",sheet:"Pedidos",rows:pedRows}, res, rej); }),
-    new Promise(function(res,rej){ erpFetch({action:"clearAndSave",sheet:"Productos",rows:prodRows}, res, rej); })
-  ];
-
-  Promise.all(promises)
-    .then(function(){
-      setSyncStatus("ok");
-      offlineQueue=[];
-      guardarQueue();
-      var msg="✅ Sync completo: "+clientes.length+" clientes, "+pedidos.length+" pedidos, "+productos.length+" productos";
-      showToast(msg);
-      if(qDiv) qDiv.textContent=msg;
-    })
-    .catch(function(err){
-      setSyncStatus("error");
-      showToast("❌ Error al sincronizar — revisá la conexión");
-      if(qDiv) qDiv.textContent="❌ Error de sync";
-    });
+  productos.forEach(function(p){
+    var row={id:p.id,nombre:p.nombre,marca:p.marca,rubro:p.rubro,costo:p.costo,precio:p.precio,stock:p.stock||0,minStock:p.minStock||3};
+    erpFetch({action:"save",sheet:"Productos",row:row},
+      function(){tick(true);}, function(){tick(false);}
+    );
+  });
 }
 
 function exportarBackup(){
