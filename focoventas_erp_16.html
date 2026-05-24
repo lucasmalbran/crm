@@ -1735,9 +1735,12 @@ function getFiltroMobilePedidos(){
   return misP;
 }
 
-function calcTiempoRuta(vendedorId){
-  var hoy=hoyStr();
-  var pp=pedidos.filter(function(p){return p.fecha===hoy&&p.vendedorId===vendedorId&&!p.esPago&&p.total>0&&p.hora;});
+function calcTiempoRuta(vendedorId, fechaParam){
+  var hoy=fechaParam||hoyStr();
+  var pp=pedidos.filter(function(p){
+    var pFecha=p.fecha?String(p.fecha).split("T")[0]:"";
+    return pFecha===hoy&&p.vendedorId===vendedorId&&!p.esPago&&p.total>0&&p.hora;
+  });
   if(pp.length===0) return null;
   // Ordenar por hora
   var sorted=pp.slice().sort(function(a,b){return a.hora.localeCompare(b.hora);});
@@ -3285,9 +3288,16 @@ var gastosHoy = [];
 
 function abrirCierreRuta(){
   gastosHoy = [];
-  // Setear la fecha de hoy en el selector
   var dateInput = document.getElementById("cierreFechaSelect");
-  if(dateInput) dateInput.value = hoyStr();
+  if(dateInput){
+    // Buscar la fecha más reciente con pedidos del vendedor
+    var fechasConPedidos = pedidos
+      .filter(function(p){return p.vendedorId===1&&!p.esPago&&p.total>0;})
+      .map(function(p){return String(p.fecha).split("T")[0];})
+      .filter(function(f){return f;});
+    var ultimaFecha = fechasConPedidos.sort().reverse()[0] || hoyStr();
+    dateInput.value = ultimaFecha;
+  }
   renderCierre();
   document.getElementById("cierreOverlay").classList.add("active");
 }
@@ -3307,7 +3317,10 @@ function renderCierreRuta(){
 function renderCierre(fechaParam){
   var fecha = fechaParam || (document.getElementById("cierreFechaSelect")||{value:hoyStr()}).value || hoyStr();
   var esHoy = fecha === hoyStr();
-  var misP = pedidos.filter(function(p){return p.fecha===fecha&&p.vendedorId===1&&!p.esPago&&p.total>0;});
+  var misP = pedidos.filter(function(p){
+    var pFecha = p.fecha?String(p.fecha).split("T")[0]:"";
+    return pFecha===fecha && p.vendedorId===1 && !p.esPago && p.total>0;
+  });
   var efectivo=0, transferencia=0, ctacte=0, ganancia=0;
   misP.forEach(function(p){
     if(p.cobro==="efectivo") efectivo+=p.total;
@@ -3322,7 +3335,7 @@ function renderCierre(fechaParam){
   document.getElementById("cierreVendNombre").textContent=vendedores[0].nombre;
 
   // Tiempo en ruta
-  var tiempoRuta=calcTiempoRuta(1);
+  var tiempoRuta=calcTiempoRuta(1, fecha);
   var tiempoHTML=tiempoRuta?
     '<div style="background:rgba(74,158,255,0.08);border:1px solid rgba(74,158,255,0.2);border-radius:10px;padding:10px 14px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;">'+
       '<div><div style="font-size:0.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;">⏱️ Tiempo en ruta</div>'+
