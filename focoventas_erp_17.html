@@ -4845,6 +4845,11 @@ document.getElementById("vendedorOverlay").addEventListener("click",function(e){
   document.querySelectorAll('#mobileLayout .overlay').forEach(function(el) {
     document.body.appendChild(el);
   });
+  function cerrarNpModal() {
+    var m = document.getElementById('_np_modal');
+    if (m) m.remove();
+  }
+  window._cerrarNpModal = cerrarNpModal;
   function addNuevoPedidoBtn() {
     var dp = document.getElementById('ds-pedidos');
     if (!dp || document.getElementById('_btn_np')) return;
@@ -4857,15 +4862,42 @@ document.getElementById("vendedorOverlay").addEventListener("click",function(e){
     b.onclick = function() {
       var cls = window.clientes || [];
       if (!cls.length) { alert('No hay clientes'); return; }
-      var ex = document.getElementById('_np_modal');
-      if (ex) ex.remove();
-      var opts = cls.map(function(c) { return '<option value="'+c.id+'">'+c.nombre+'</option>'; }).join('');
+      window._cerrarNpModal();
+      var opts = cls.map(function(c) { return '<option value="' + c.id + '">' + c.nombre + '</option>'; }).join('');
       var m = document.createElement('div');
       m.id = '_np_modal';
       m.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:10000;display:flex;align-items:center;justify-content:center;';
-      m.innerHTML = '<div style="background:var(--dark2,#1a1a2e);border-radius:16px;padding:24px;min-width:300px;border:1px solid var(--border,#333);"><h3 style="color:white;margin:0 0 16px;">Seleccionar cliente</h3><select id="_np_sel" style="width:100%;padding:10px;border-radius:8px;background:var(--dark3,#222);color:white;border:1px solid var(--border,#333);font-size:1rem;">'+opts+'</select><div style="display:flex;gap:8px;margin-top:16px;"><button onclick="document.getElementById('_np_modal').remove()" style="flex:1;padding:10px;border-radius:8px;background:none;border:1px solid #555;color:#aaa;cursor:pointer;">Cancelar</button><button id="_np_ok" style="flex:2;padding:10px;border-radius:8px;background:var(--orange,orange);color:black;border:none;font-weight:700;cursor:pointer;">Crear pedido</button></div></div>';
+      var inner = document.createElement('div');
+      inner.style.cssText = 'background:var(--dark2,#1a1a2e);border-radius:16px;padding:24px;min-width:300px;border:1px solid var(--border,#333);';
+      var title = document.createElement('h3');
+      title.style.cssText = 'color:white;margin:0 0 16px;';
+      title.textContent = 'Seleccionar cliente';
+      var sel = document.createElement('select');
+      sel.id = '_np_sel';
+      sel.style.cssText = 'width:100%;padding:10px;border-radius:8px;background:var(--dark3,#222);color:white;border:1px solid var(--border,#333);font-size:1rem;';
+      sel.innerHTML = opts;
+      var row = document.createElement('div');
+      row.style.cssText = 'display:flex;gap:8px;margin-top:16px;';
+      var btnCancel = document.createElement('button');
+      btnCancel.textContent = 'Cancelar';
+      btnCancel.style.cssText = 'flex:1;padding:10px;border-radius:8px;background:none;border:1px solid #555;color:#aaa;cursor:pointer;';
+      btnCancel.onclick = function() { window._cerrarNpModal(); };
+      var btnOk = document.createElement('button');
+      btnOk.id = '_np_ok';
+      btnOk.textContent = 'Crear pedido';
+      btnOk.style.cssText = 'flex:2;padding:10px;border-radius:8px;background:var(--orange,orange);color:black;border:none;font-weight:700;cursor:pointer;';
+      btnOk.onclick = function() {
+        var id = parseInt(document.getElementById('_np_sel').value);
+        window._cerrarNpModal();
+        window.abrirPedido(id);
+      };
+      row.appendChild(btnCancel);
+      row.appendChild(btnOk);
+      inner.appendChild(title);
+      inner.appendChild(sel);
+      inner.appendChild(row);
+      m.appendChild(inner);
       document.body.appendChild(m);
-      document.getElementById('_np_ok').onclick = function() { var id=parseInt(document.getElementById('_np_sel').value); m.remove(); window.abrirPedido(id); };
     };
     var h2 = hdr.querySelector('h2');
     if (h2) h2.insertAdjacentElement('afterend', b);
