@@ -22,7 +22,7 @@ h1,h2,h3,.syne{font-family:'Syne',sans-serif;}
 @media (min-width: 900px) {
   /* Ocultar layout mobile en desktop */
   .mobile-layout { display: none !important; }
-  .desktop-layout { display: flex !important; height: 100vh; width: 100vw; overflow: hidden; position: fixed; top: 0; left: 0; }
+  .desktop-layout { display: flex !important; height: 100vh; width: 100vw; overflow: hidden; position: fixed; top: 0; left: 0; z-index: 1; }
 
   /* SIDEBAR */
   .ds-sidebar {
@@ -1143,7 +1143,7 @@ function guardarMarcasCats(){
 }
 
 function abrirNuevoProd(){
-  document.getElementById("nuevoProdOverlay").classList.add("active");
+  abrirOverlay("nuevoProdOverlay");
   document.getElementById("npMarca").innerHTML = marcasConfig.map(function(m){return '<option value="'+m+'">'+m+'</option>';}).join("");
   document.getElementById("npCategoria").innerHTML = categoriasConfig.map(function(c){return '<option value="'+c+'">'+c+'</option>';}).join("");
   document.getElementById("npNombre").value="";
@@ -1180,7 +1180,7 @@ function confirmarNuevoProd(){
 }
 
 function abrirGestionCats(){
-  document.getElementById("gestionCatsOverlay").classList.add("active");
+  abrirOverlay("gestionCatsOverlay");
   renderGestionCats();
 }
 
@@ -1597,6 +1597,20 @@ function goScreen(name, btn) {
 // ===== UTILS =====
 function peso(n){return "$"+Math.round(Math.abs(n)).toLocaleString("es-AR");}
 function margen(c,p){return c>0?Math.round((p-c)/c*100):0;} // % sobre costo
+
+// Helper: mueve el overlay al body para evitar problemas de stacking context en desktop
+function abrirOverlay(id){
+  var el=document.getElementById(id);
+  if(!el)return;
+  if(el.parentNode!==document.body)document.body.appendChild(el);
+  el.style.zIndex="9000";
+  el.style.position="fixed";
+  el.classList.add("active");
+}
+function cerrarOverlay(id){
+  var el=document.getElementById(id);
+  if(el)el.classList.remove("active");
+}
 function dist(lat1,lng1,lat2,lng2){
   var R=6371000,dLat=(lat2-lat1)*Math.PI/180,dLng=(lng2-lng1)*Math.PI/180;
   var a=Math.sin(dLat/2)*Math.sin(dLat/2)+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)*Math.sin(dLng/2);
@@ -1874,7 +1888,7 @@ function abrirPedido(clienteId){
   document.getElementById("pedidoTotal").textContent="$0";
   document.querySelectorAll(".cobro-btn").forEach(function(b){b.classList.remove("sel");});
   document.querySelector(".cobro-btn").classList.add("sel");
-  document.getElementById("pedidoOverlay").classList.add("active");
+  abrirOverlay("pedidoOverlay");
 }
 
 function renderProdLines(prods){
@@ -1970,7 +1984,7 @@ function confirmarPedido(){
 function mostrarTicket(pedidoId){
   // Guardar el ID y mostrar modal de selección de formato
   window._ticketPedidoId = pedidoId;
-  document.getElementById("ticketFormatoOverlay").classList.add("active");
+  abrirOverlay("ticketFormatoOverlay");
 }
 
 function imprimirTicket(formato){
@@ -2332,7 +2346,7 @@ function abrirEditProd(prodId){
   document.getElementById("editProdStock").value=p.stock||0;
   document.getElementById("editProdMinStock").value=p.minStock||3;
   calcMargenEdit();
-  document.getElementById("editProdOverlay").classList.add("active");
+  abrirOverlay("editProdOverlay");
 }
 
 function calcMargenEdit(){
@@ -2370,7 +2384,7 @@ function cerrarEditProd(){
 function abrirCargaStock(){
   cargaItems={};
   filtrarCargaStock();
-  document.getElementById("cargaStockOverlay").classList.add("active");
+  abrirOverlay("cargaStockOverlay");
 }
 
 function filtrarCargaStock(){
@@ -2483,7 +2497,7 @@ function abrirCobroCta(clienteId){
   cobroCtaTipo="efectivo";
   document.querySelectorAll("#cobroCtaOverlay .cobro-btn").forEach(function(b){b.classList.remove("sel");});
   document.querySelector("#cobroCtaOverlay .cobro-btn").classList.add("sel");
-  document.getElementById("cobroCtaOverlay").classList.add("active");
+  abrirOverlay("cobroCtaOverlay");
 }
 
 function setCobroCtaTipo(btn,tipo){
@@ -3047,7 +3061,7 @@ function abrirAccionesPedido(pedidoId){
   }).join(", ");
   document.getElementById("accionesItems").textContent=itemsStr||"Sin detalle";
   document.getElementById("btnPago").style.display=p.cobro==="ctacte"?"flex":"none";
-  document.getElementById("accionesOverlay").classList.add("active");
+  abrirOverlay("accionesOverlay");
 }
 
 function cerrarAcciones(){document.getElementById("accionesOverlay").classList.remove("active");pedidoAccionId=null;}
@@ -3079,11 +3093,7 @@ function editarPedido(){
   pedidoActual.total=total;pedidoActual.ganancia=ganancia;
   document.getElementById("pedidoTotal").textContent=peso(total);
   document.querySelectorAll(".cobro-btn").forEach(function(b){b.classList.remove("sel");if(b.textContent.toLowerCase().includes(p.cobro.substring(0,4)))b.classList.add("sel");});
-  // Forzar overlay encima en desktop
-  var overlay=document.getElementById("pedidoOverlay");
-  overlay.style.zIndex="9999";
-  overlay.style.position="fixed";
-  overlay.classList.add("active");
+  abrirOverlay("pedidoOverlay");
 }
 
 var _orig=confirmarPedido;
@@ -3112,7 +3122,7 @@ function abrirPago(){
   pagoCobroTipo="efectivo";
   document.querySelectorAll("#pagoOverlay .cobro-btn").forEach(function(b){b.classList.remove("sel");});
   document.querySelector("#pagoOverlay .cobro-btn").classList.add("sel");
-  document.getElementById("pagoOverlay").classList.add("active");
+  abrirOverlay("pagoOverlay");
 }
 
 function setPagoCobro(btn,tipo){document.querySelectorAll("#pagoOverlay .cobro-btn").forEach(function(b){b.classList.remove("sel");});btn.classList.add("sel");pagoCobroTipo=tipo;}
@@ -3220,7 +3230,7 @@ function abrirDetalleCliente(clienteId){
         '</div></div>';
     }).join("");
 
-  document.getElementById("detalleClienteOverlay").classList.add("active");
+  abrirOverlay("detalleClienteOverlay");
 }
 
 function abrirPedidoDesdeDetalle(clienteId){
@@ -3253,7 +3263,7 @@ function abrirFormCliente(clienteId){
     document.getElementById("btnEliminarCliente").style.display="none";
   }
   document.getElementById("detalleClienteOverlay").classList.remove("active");
-  document.getElementById("formClienteOverlay").classList.add("active");
+  abrirOverlay("formClienteOverlay");
 }
 
 function cerrarFormCliente(){
@@ -3309,7 +3319,7 @@ function abrirCierreRuta(){
     .filter(function(f){return f;});
   var ultimaFecha = fechasConPedidos.sort().reverse()[0] || hoyStr();
 
-  document.getElementById("cierreOverlay").classList.add("active");
+  abrirOverlay("cierreOverlay");
   // Esperar que el DOM esté listo antes de setear el valor
   setTimeout(function(){
     var dateInput = document.getElementById("cierreFechaSelect");
@@ -3998,7 +4008,7 @@ function abrirNuevoVendedor(){
   document.getElementById("vRol").value="vendedor";
   document.getElementById("vActivo").checked=true;
   document.getElementById("btnEliminarVendedor").style.display="none";
-  document.getElementById("vendedorOverlay").classList.add("active");
+  abrirOverlay("vendedorOverlay");
 }
 
 function editarVendedor(key){
@@ -4010,7 +4020,7 @@ function editarVendedor(key){
   document.getElementById("vRol").value=u.rol;
   document.getElementById("vActivo").checked=u.activo!==false;
   document.getElementById("btnEliminarVendedor").style.display=key==="admin"?"none":"block";
-  document.getElementById("vendedorOverlay").classList.add("active");
+  abrirOverlay("vendedorOverlay");
 }
 
 function cerrarVendedorModal(){
@@ -4322,7 +4332,7 @@ function abrirCierreMensual(){
       '</div>'+
     '</div>';
 
-  document.getElementById("cierreMensualOverlay").classList.add("active");
+  abrirOverlay("cierreMensualOverlay");
 }
 
 function enviarCierreMensualWA(){
