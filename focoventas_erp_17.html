@@ -1305,7 +1305,7 @@ function cargarDesdeSheets(){
       if(res.ok && res.data && res.data.length>0){
         clientes=res.data.map(function(c){
           c.marcas=typeof c.marcas==="string"?c.marcas.split(",").filter(Boolean):(c.marcas||[]);
-          c.id=Number(c.id); c.saldo=Number(c.saldo)||0;
+          c.id=Number(c.id); var _lc=clientes.find(function(x){return x.id===Number(c.id);}); c.saldo=_lc?_lc.saldo:(Number(c.saldo)||0);
           c.lat=Number(c.lat)||0; c.lng=Number(c.lng)||0;
           return c;
         });
@@ -2919,7 +2919,7 @@ function volverLogin(){
 }
 
 function presionarPin(d){
-  if(pinActual.length>=4) return;
+  if(!loginUsuarioId) return;    if(pinActual.length>=4) return;
   pinActual+=d; actualizarDots();
   if(pinActual.length===4) setTimeout(verificarPin,150);
 }
