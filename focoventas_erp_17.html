@@ -1302,7 +1302,7 @@ function cargarDesdeSheets(){
   fetch(ERP_SCRIPT_URL+"?action=getAll&sheet=Clientes")
     .then(function(r){return r.json();})
     .then(function(res){
-      if(res.ok && res.data && res.data.length>0){
+      if(res.ok && res.data){
         clientes=res.data.map(function(c){
           c.marcas=typeof c.marcas==="string"?c.marcas.split(",").filter(Boolean):(c.marcas||[]);
           c.id=Number(c.id); var _lc=clientes.find(function(x){return x.id===Number(c.id);}); c.saldo=_lc?_lc.saldo:(Number(c.saldo)||0);
@@ -1317,7 +1317,7 @@ function cargarDesdeSheets(){
   fetch(ERP_SCRIPT_URL+"?action=getAll&sheet=Pedidos")
     .then(function(r){return r.json();})
     .then(function(res){
-      if(res.ok && res.data && res.data.length>0){
+      if(res.ok && res.data){
         pedidos=res.data.map(function(p){
           p.id=Number(p.id);
           p.clienteId=Number(p.clienteId);
@@ -1341,7 +1341,7 @@ function cargarDesdeSheets(){
   fetch(ERP_SCRIPT_URL+"?action=getAll&sheet=Productos")
     .then(function(r){return r.json();})
     .then(function(res){
-      if(res.ok && res.data && res.data.length>0){
+      if(res.ok && res.data){
         res.data.forEach(function(row){
           var p=productos.find(function(x){return x.id===Number(row.id);});
           if(p){
