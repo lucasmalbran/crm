@@ -1,12 +1,12 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8">
+<meta charset="UTF-8">h
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Foco Ventas</title>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
-:root {
+:root {h
   --red:#d62b2b; --dark:#0f0f14; --dark2:#1a1a24; --dark3:#22222e;
   --card:#1e1e2a; --border:rgba(255,255,255,0.07); --text:#f0f0f8;
   --muted:#8888aa; --green:#2ec27e; --yellow:#f4c542; --blue:#4a9eff;h
@@ -1318,7 +1318,7 @@ function cargarDesdeSheets(){
     .then(function(r){return r.json();})
     .then(function(res){
       if(res.ok && res.data && res.data.length>0){
-        if(pedidos.length===0) pedidos=res.data.map(function(p){
+        var _delIds=JSON.parse(localStorage.getItem('sf_pedidos_deleted')||'[]'); if(pedidos.length===0) pedidos=res.data.filter(function(_r){return _delIds.indexOf(Number(_r.id))===-1;}).map(function(p){
           p.id=Number(p.id);
           p.clienteId=Number(p.clienteId);
           p.vendedorId=Number(p.vendedorId)||1;
@@ -3070,7 +3070,7 @@ function borrarPedido(){
   var p=pedidos.find(function(x){return x.id===pedidoAccionId;});if(!p)return;
   if(!confirm("¿Borrar este pedido?"))return;
   if(p.cobro==="ctacte"){var cli=clientes.find(function(c){return c.id===p.clienteId;});if(cli)cli.saldo=Math.max(0,cli.saldo-p.total);}
-  pedidos=pedidos.filter(function(x){return x.id!==pedidoAccionId;});
+  pedidos=pedidos.filter(function(x){return x.id!==pedidoAccionId;}); var _del=JSON.parse(localStorage.getItem('sf_pedidos_deleted')||'[]'); if(_del.indexOf(pedidoAccionId)===-1)_del.push(pedidoAccionId); localStorage.setItem('sf_pedidos_deleted',JSON.stringify(_del));
   saveData(); cerrarAcciones();
   showToast("🗑️ Pedido eliminado");
   syncDeletePedido(pedidoAccionId);
