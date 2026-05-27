@@ -1112,7 +1112,7 @@ var ERP_SCRIPT_URL = localStorage.getItem("fv_erp_url") || "https://script.googl
 
 function saveLocal(){
   localStorage.setItem("sf_clientes", JSON.stringify(clientes));
-  localStorage.setItem("sf_pedidos", JSON.stringify(pedidos));
+  // pedidos no se guarda en localStorage (Sheets es la fuente de verdad)
   localStorage.setItem("sf_productos", JSON.stringify(productos));
 }
 
@@ -1318,7 +1318,7 @@ function cargarDesdeSheets(){
     .then(function(r){return r.json();})
     .then(function(res){
       if(res.ok && res.data && res.data.length>0){
-        var _delIds=JSON.parse(localStorage.getItem('sf_pedidos_deleted')||'[]'); if(pedidos.length===0) pedidos=res.data.filter(function(_r){return _delIds.indexOf(Number(_r.id))===-1;}).map(function(p){
+        pedidos=res.data.map(function(p){
           p.id=Number(p.id);
           p.clienteId=Number(p.clienteId);
           p.vendedorId=Number(p.vendedorId)||1;
@@ -1501,7 +1501,7 @@ function importarBackup(file){
       pedidos = backup.pedidos;
       productos = backup.productos;
       localStorage.setItem("sf_clientes", JSON.stringify(clientes));
-      localStorage.setItem("sf_pedidos", JSON.stringify(pedidos));
+      // pedidos no se guarda en localStorage (Sheets es la fuente de verdad)
       localStorage.setItem("sf_productos", JSON.stringify(productos));
       showToast("✅ Backup restaurado — "+clientes.length+" clientes, "+pedidos.length+" pedidos");
       setTimeout(function(){location.reload();}, 1500);
