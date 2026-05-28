@@ -2073,29 +2073,27 @@ function imprimirTicket(formato){
   } else {
     // ===== TICKET 58mm =====
     var itemsHTML58=items.map(function(i){
-      return '<div style="display:flex;justify-content:space-between;padding:3px 0;font-size:11px;border-bottom:1px dashed #ddd;">'+
-        '<div style="flex:1;padding-right:4px;">'+i.nombre+'<span style="color:#666;"> x'+i.qty+'</span></div>'+
+      return '<div style="display:flex;justify-content:space-between;padding:3px 0;font-size:13px;border-bottom:1px dashed #000;">'+
+        '<div style="flex:1;padding-right:4px;">'+i.nombre+'<span style="color:#000;"> x'+i.qty+'</span></div>'+
         '<div style="font-weight:700;white-space:nowrap;">'+peso(i.subtotal)+'</div>'+
       '</div>';
-    }).join("");
-
+<div style="font-size:13px;">
     ticketHTML='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Ticket '+numPedido+'</title>'+
     '<style>'+
-      '@page{size:58mm auto;margin:2mm 3mm;}'+
-      'body{font-family:"Courier New",monospace;width:52mm;margin:0;padding:0;color:#000;font-size:11px;}'+
+      '@page{size:58mm auto;margin:0;}'+
+      'body{font-family:"Courier New",monospace;width:58mm;margin:0;padding:0;color:#000;font-size:14px;}'+
       '.center{text-align:center;}'+
-      '.logo{font-size:16px;font-weight:900;letter-spacing:-0.5px;}'+
+      '.logo{font-size:22px;font-weight:900;letter-spacing:-0.5px;}'+
       '.divider{border:none;border-top:1px dashed #000;margin:5px 0;}'+
-      '.total-line{display:flex;justify-content:space-between;font-size:13px;font-weight:900;padding:4px 0;border-top:2px solid #000;}'+
-      '.footer{text-align:center;font-size:9px;color:#666;margin-top:6px;}'+
-      '@media print{.no-print{display:none!important;} @page{margin:0;}}'+
+      '.total-line{display:flex;justify-content:space-between;font-size:16px;font-weight:900;padding:4px 0;border-top:2px solid #000;}'+
+      '.footer{text-align:center;font-size:12px;color:#000;margin-top:6px;}'+
+      'img{width:100%;display:block;} @media print{.no-print{display:none!important;} @page{margin:0;}}'+
     '</style></head><body>'+
     '<div class="center">'+
       '<div class="logo"><span style="color:#d62b2b;">Foco</span><span style="color:#f4a020;">Ventas</span></div>'+
-      '<div style="font-size:9px;color:#666;">Córdoba, Argentina</div>'+
-    '</div>'+
+<img    '</div>'+
     '<hr class="divider">'+
-    '<div style="font-size:10px;">'+
+    '<div style="font-size:13px;">'+
       '<div>N°: <strong>'+numPedido+'</strong></div>'+
       '<div>'+p.fecha+' '+p.hora+'</div>'+
       '<div>Cliente: <strong>'+cli.nombre+'</strong></div>'+
@@ -2104,7 +2102,7 @@ function imprimirTicket(formato){
     itemsHTML58+
     '<hr class="divider">'+
     '<div class="total-line"><span>TOTAL</span><span>'+peso(p.total)+'</span></div>'+
-    '<div style="font-size:10px;text-align:center;padding:4px 0;background:#f4f4f4;margin-top:4px;border-radius:3px;">'+
+    '<div style="font-size:13px;text-align:center;padding:4px 0;background:#f4f4f4;margin-top:4px;border-radius:3px;">'+
       (cobroLabel[p.cobro]||p.cobro)+
     '</div>'+
     '<div class="footer">¡Gracias por su compra!<br>Foco Ventas</div>'+
