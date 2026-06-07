@@ -3065,13 +3065,13 @@ function abrirAccionesPedido(pedidoId){
 function cerrarAcciones(){document.getElementById("accionesOverlay").classList.remove("active");pedidoAccionId=null;}
 
 function borrarPedido(){
-  var p=pedidos.find(function(x){return x.id===pedidoAccionId;});if(!p)return;
+  var idABorrar=pedidoAccionId; var p=pedidos.find(function(x){return x.id===pedidoAccionId;});if(!p)return;
   if(!confirm("¿Borrar este pedido?"))return;
   if(p.cobro==="ctacte"){var cli=clientes.find(function(c){return c.id===p.clienteId;});if(cli)cli.saldo=Math.max(0,cli.saldo-p.total);}
   pedidos=pedidos.filter(function(x){return x.id!==pedidoAccionId;}); var _del=JSON.parse(localStorage.getItem('sf_pedidos_deleted')||'[]'); if(_del.indexOf(pedidoAccionId)===-1)_del.push(pedidoAccionId); localStorage.setItem('sf_pedidos_deleted',JSON.stringify(_del));
   saveData(); cerrarAcciones();
   showToast("🗑️ Pedido eliminado");
-  syncDeletePedido(pedidoAccionId);
+  syncDeletePedido(idABorrar);
   renderAdmin(); renderVendedor();
 }
 
