@@ -2107,12 +2107,12 @@ function imprimirTicket(formato){
     '</div>'+
     '<div class="footer">¡Gracias por su compra!<br>Foco Ventas</div>'+
     '<br>'+
-    '<div class="no-print" style="display:flex;gap:6px;margin-top:8px;">'+
+    '<div class="no-print" style="display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:6px;">'+'<button onclick="cambiarZoom(-0.1)" style="padding:5px 14px;background:#555;color:#fff;border:none;border-radius:5px;font-size:15px;font-weight:700;cursor:pointer;">A-</button>'+'<span id="zl" style="font-size:12px;min-width:38px;text-align:center;font-weight:700;">100%</span>'+'<button onclick="cambiarZoom(0.1)" style="padding:5px 14px;background:#555;color:#fff;border:none;border-radius:5px;font-size:15px;font-weight:700;cursor:pointer;">A+</button>'+'</div>'+'<div class="no-print" style="display:flex;gap:6px;margin-top:8px;">'+
       '<button onclick="window.print()" style="flex:1;padding:10px;background:#d62b2b;color:white;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;">🖨️ Imprimir</button>'+
       '<button onclick="generarPDF()" style="flex:1;padding:10px;background:#1a73e8;color:white;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;">📄 PDF</button>'+
     '</div>'+
     '<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"><\/script>'+
-    '<script>function generarPDF(){'+
+    '<script>var _z=1;function cambiarZoom(d){_z=Math.min(2,Math.max(0.5,parseFloat((_z+d).toFixed(1))));document.querySelector(".center").style.transform="scale("+_z+")";document.querySelector(".center").style.transformOrigin="top center";document.getElementById("zl").textContent=Math.round(_z*100)+"%";}function generarPDF(){'+
       'var el=document.body;'+
       'var opt={margin:2,filename:"ticket.pdf",image:{type:"jpeg",quality:0.98},html2canvas:{scale:3},jsPDF:{unit:"mm",format:[58,120],orientation:"portrait"}};'+
       'html2pdf().set(opt).from(el).save();'+
