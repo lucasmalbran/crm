@@ -2078,10 +2078,10 @@ function imprimirTicket(formato){
         '<div style="font-weight:700;white-space:nowrap;">'+peso(i.subtotal)+'</div>'+
       '</div>';
   }).join('');
-    ticketHTML='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Ticket '+numPedido+'</title>'+
+    ticketHTML='<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=219, initial-scale=1"><title>Ticket '+numPedido+'</title>'+
     '<style>'+
       '@page{size:58mm auto;margin:0;}'+
-      'body{font-family:"Courier New",monospace;width:58mm;margin:0;padding:0;color:#000;font-size:14px;}'+
+      'body{font-family:"Courier New",monospace;width:58mm;max-width:58mm;margin:0 auto;padding:0;box-sizing:border-box;color:#000;font-size:14px;font-weight:700;}'+
       '.center{text-align:center;}'+
       '.logo{font-size:22px;font-weight:900;letter-spacing:-0.5px;}'+
       '.divider{border:none;border-top:1px dashed #000;margin:5px 0;}'+
