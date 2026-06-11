@@ -1406,6 +1406,13 @@ function cargarDesdeSheets(){
           try{p.items=typeof p.items==="string"?JSON.parse(p.items):(p.items||{});}catch(e){p.items={};}
           return p;
         });
+        // No resucitar pedidos borrados en este dispositivo: filtrar y reenviar delete
+        if(deletedPedidos.length>0){
+          var resucitados=pedidos.filter(function(p){return deletedPedidos.indexOf(p.id)!==-1;});
+          pedidos=pedidos.filter(function(p){return deletedPedidos.indexOf(p.id)===-1;});
+          resucitados.forEach(function(p){ agregarAQueue("delete","Pedidos",p.id); });
+          if(resucitados.length>0) setTimeout(procesarQueue,1000);
+        }
       }
       checkDone();
     }).catch(function(){checkDone();});
@@ -1617,11 +1624,30 @@ function syncPedido(p){
   );
 }
 
+// Tombstones: IDs de pedidos borrados, para que no resuciten al bajar del Sheet
+var deletedPedidos = JSON.parse(localStorage.getItem("fv_deleted_pedidos")||"[]");
+function marcarBorrado(id){
+  id=Number(id);
+  if(deletedPedidos.indexOf(id)===-1){ deletedPedidos.push(id); }
+  // Mantener solo los últimos 200 para no crecer infinito
+  if(deletedPedidos.length>200) deletedPedidos=deletedPedidos.slice(-200);
+  localStorage.setItem("fv_deleted_pedidos",JSON.stringify(deletedPedidos));
+}
 function syncDeletePedido(id){
   saveLocal();
+  marcarBorrado(id);
+  if(!navigator.onLine){
+    agregarAQueue("delete","Pedidos",id);
+    showToast("📵 Sin internet — se borrará de la nube al reconectar");
+    setSyncStatus("local"); return;
+  }
   erpFetch({action:"delete",sheet:"Pedidos",id:id},
     function(){ setSyncStatus("ok"); },
-    function(){ setSyncStatus("error"); }
+    function(){
+      // Falló: encolar para reintentar y no perder el borrado
+      agregarAQueue("delete","Pedidos",id);
+      setSyncStatus("error");
+    }
   );
 }
 
@@ -3150,7 +3176,8 @@ function cerrarAcciones(){document.getElementById("accionesOverlay").classList.r
 function borrarPedido(){
   var p=pedidos.find(function(x){return x.id===pedidoAccionId;});if(!p)return;
   if(!confirm("¿Borrar este pedido?"))return;
-  if(p.cobro==="ctacte"){var cli=clientes.find(function(c){return c.id===p.clienteId;});if(cli)cli.saldo=Math.max(0,cli.saldo-p.total);}
+  var idBorrar=p.id; // capturar ANTES de cerrarAcciones (que pone pedidoAccionId=null)
+  if(p.cobro==="ctacte"){var cli=clientes.find(function(c){return c.id===p.clienteId;});if(cli){cli.saldo=Math.max(0,cli.saldo-p.total);syncCliente(cli);}}
   // Devolver stock de los items
   Object.keys(p.items||{}).forEach(function(id){
     var qty=p.items[id]; if(!qty) return;
@@ -3158,10 +3185,10 @@ function borrarPedido(){
     if(pr) pr.stock=(pr.stock||0)+qty;
   });
   localStorage.setItem("sf_productos",JSON.stringify(productos));
-  pedidos=pedidos.filter(function(x){return x.id!==pedidoAccionId;});
+  pedidos=pedidos.filter(function(x){return x.id!==idBorrar;});
   saveData(); cerrarAcciones();
   showToast("🗑️ Pedido eliminado");
-  syncDeletePedido(pedidoAccionId);
+  syncDeletePedido(idBorrar);
   renderAdmin(); renderVendedor();
 }
 
