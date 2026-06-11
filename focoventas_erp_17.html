@@ -1074,6 +1074,18 @@ var productos = [
         if(s.nombre && s.nombre.trim()) p.nombre = s.nombre;
         if(s.rubro) p.rubro = s.rubro;
         if(s.marca) p.marca = s.marca;
+      } else {
+        // Producto nuevo creado por el usuario: conservarlo
+        productos.push({
+          id: sid,
+          nombre: s.nombre||"Producto",
+          marca: s.marca||"",
+          rubro: s.rubro||"",
+          costo: parseFloat(s.costo)||0,
+          precio: parseFloat(s.precio)||0,
+          stock: parseInt(s.stock)||0,
+          minStock: parseInt(s.minStock)||3
+        });
       }
     });
   }
@@ -1100,6 +1112,13 @@ var clientes = JSON.parse(localStorage.getItem("sf_clientes") || "null") || [
   {id:11,nombre:"Santa Cava",dir:"Armada Argentina",marcas:["BIMBO"],tipo:"Drugstore",tel:"",lat:-31.428,lng:-64.186,saldo:12000},
   {id:12,nombre:"Almacen",dir:"Ambrosio Olmos 668",marcas:["BIMBO"],tipo:"Otro",tel:"",lat:-31.421,lng:-64.196,saldo:0},
 ];
+// Normalizar clientes (marcas puede venir como string del Sheet)
+clientes = clientes.map(function(c){
+  c.marcas = typeof c.marcas==="string" ? c.marcas.split(",").filter(Boolean) : (c.marcas||[]);
+  c.id = Number(c.id); c.saldo = Number(c.saldo)||0;
+  c.lat = Number(c.lat)||0; c.lng = Number(c.lng)||0;
+  return c;
+});
 
 var pedidos = JSON.parse(localStorage.getItem("sf_pedidos") || "[]").map(function(p){
   p.esPago = p.esPago===true||p.esPago==="true";
@@ -1256,10 +1275,7 @@ function eliminarCategoria(idx){
   showToast("✅ Categoría eliminada");
 }
 
-function syncProducto(prod){
-  if(!ERP_SCRIPT_URL) return;
-  fetch(ERP_SCRIPT_URL,{method:"POST",body:JSON.stringify({action:"save",sheet:"Productos",row:prod})}).catch(function(){});
-}
+// syncProducto definido más abajo con erpFetch (GET, compatible CORS)
 
 // Capturar errores JS globales
 window.onerror = function(msg, src, line, col, err){
@@ -1991,7 +2007,7 @@ function confirmarPedido(){
   };
   if(pedido.cobro==="ctacte"){
     var cli=clientes.find(function(c){return c.id===pedido.clienteId;});
-    if(cli) cli.saldo=(cli.saldo||0)+pedido.total;
+    if(cli){ cli.saldo=(cli.saldo||0)+pedido.total; syncCliente(cli); }
   }
   pedidos.push(pedido);
   saveData();
@@ -2472,12 +2488,15 @@ var _origConfirmar=confirmarPedido;
 confirmarPedido=function(){
   // Descontar stock
   if(pedidoActual.items&&!pedidoActual.editandoId){
+    var afectados=[];
     Object.keys(pedidoActual.items).forEach(function(id){
       var qty=pedidoActual.items[id]; if(!qty) return;
       var p=productos.find(function(x){return x.id===parseInt(id);});
-      if(p) p.stock=(p.stock||0)-qty;
+      if(p){ p.stock=(p.stock||0)-qty; afectados.push(p); }
     });
     localStorage.setItem("sf_productos",JSON.stringify(productos));
+    // Subir stock actualizado al Sheet (en segundo plano)
+    afectados.forEach(function(p){ syncProducto(p); });
   }
   _origConfirmar();
 };
@@ -2531,8 +2550,11 @@ function confirmarCobroCta(){
   if(!monto||monto<=0){showToast("⚠️ Ingresá un monto válido");return;}
   var cli=clientes.find(function(c){return c.id===cobroCtaClienteId;}); if(!cli) return;
   cli.saldo=Math.max(0,(cli.saldo||0)-monto);
-  pedidos.push({id:Date.now(),clienteId:cli.id,vendedorId:1,items:{},total:-monto,ganancia:0,
-    cobro:cobroCtaTipo,fecha:hoyStr(),hora:new Date().toLocaleTimeString("es-AR"),esPago:true});
+  var cobro={id:Date.now(),clienteId:cli.id,vendedorId:1,items:{},total:-monto,ganancia:0,
+    cobro:cobroCtaTipo,fecha:hoyStr(),hora:new Date().toLocaleTimeString("es-AR"),esPago:true};
+  pedidos.push(cobro);
+  syncPedido(cobro);
+  syncCliente(cli);
   saveData();
   document.getElementById("cobroCtaOverlay").classList.remove("active");
   showToast("💰 Cobro registrado — "+peso(monto));
@@ -3091,6 +3113,13 @@ function borrarPedido(){
   var p=pedidos.find(function(x){return x.id===pedidoAccionId;});if(!p)return;
   if(!confirm("¿Borrar este pedido?"))return;
   if(p.cobro==="ctacte"){var cli=clientes.find(function(c){return c.id===p.clienteId;});if(cli)cli.saldo=Math.max(0,cli.saldo-p.total);}
+  // Devolver stock de los items
+  Object.keys(p.items||{}).forEach(function(id){
+    var qty=p.items[id]; if(!qty) return;
+    var pr=productos.find(function(x){return x.id===parseInt(id);});
+    if(pr) pr.stock=(pr.stock||0)+qty;
+  });
+  localStorage.setItem("sf_productos",JSON.stringify(productos));
   pedidos=pedidos.filter(function(x){return x.id!==pedidoAccionId;});
   saveData(); cerrarAcciones();
   showToast("🗑️ Pedido eliminado");
@@ -3124,9 +3153,22 @@ confirmarPedido=function(){
     var idx=pedidos.findIndex(function(x){return x.id===pedidoActual.editandoId;});
     if(idx!==-1){
       var oldP=pedidos[idx];
+      // Ajustar stock: devolver items viejos, descontar items nuevos
+      Object.keys(oldP.items||{}).forEach(function(id){
+        var qty=oldP.items[id]; if(!qty) return;
+        var pr=productos.find(function(x){return x.id===parseInt(id);});
+        if(pr) pr.stock=(pr.stock||0)+qty;
+      });
+      Object.keys(pedidoActual.items||{}).forEach(function(id){
+        var qty=pedidoActual.items[id]; if(!qty) return;
+        var pr=productos.find(function(x){return x.id===parseInt(id);});
+        if(pr) pr.stock=(pr.stock||0)-qty;
+      });
+      localStorage.setItem("sf_productos",JSON.stringify(productos));
       var cli=clientes.find(function(c){return c.id===oldP.clienteId;});
       if(cli){if(oldP.cobro==="ctacte")cli.saldo=Math.max(0,cli.saldo-oldP.total);if(pedidoActual.cobro==="ctacte")cli.saldo=(cli.saldo||0)+pedidoActual.total;}
       pedidos[idx]=Object.assign({},oldP,{items:Object.assign({},pedidoActual.items),total:pedidoActual.total,ganancia:pedidoActual.ganancia,cobro:pedidoActual.cobro});
+      syncPedido(pedidos[idx]);
     }
     saveData();document.getElementById("pedidoOverlay").classList.remove("active");
     showToast("✅ Pedido actualizado");renderAdmin();renderVendedor();pedidoActual.editandoId=null;
@@ -3155,7 +3197,10 @@ function confirmarPago(){
   var cli=p?clientes.find(function(c){return c.id===p.clienteId;}):null;
   if(!cli){showToast("Error");return;}
   cli.saldo=Math.max(0,(cli.saldo||0)-monto);
-  pedidos.push({id:Date.now(),clienteId:cli.id,vendedorId:1,items:{},total:-monto,ganancia:0,cobro:pagoCobroTipo,fecha:hoyStr(),hora:new Date().toLocaleTimeString("es-AR"),esPago:true});
+  var pago={id:Date.now(),clienteId:cli.id,vendedorId:1,items:{},total:-monto,ganancia:0,cobro:pagoCobroTipo,fecha:hoyStr(),hora:new Date().toLocaleTimeString("es-AR"),esPago:true};
+  pedidos.push(pago);
+  syncPedido(pago);
+  syncCliente(cli);
   saveData();cerrarPago();showToast("💰 Pago registrado — "+peso(monto));
   renderAdmin();renderVendedor();renderCtaCte();
 }
@@ -3166,7 +3211,7 @@ function cerrarPago(){document.getElementById("pagoOverlay").classList.remove("a
 var clienteFiltroTipo = "";
 var editandoClienteId = null;
 var detalleClienteId = null;
-var nextClienteId = Math.max.apply(null, clientes.map(function(c){return c.id;})) + 1;
+var nextClienteId = clientes.length>0 ? Math.max.apply(null, clientes.map(function(c){return c.id;})) + 1 : 1;
 
 function setClienteFilter(btn){
   document.querySelectorAll("#s-clientes .fchip").forEach(function(b){b.classList.remove("active");});
@@ -3921,6 +3966,20 @@ renderAdmin = function(){
   if(IS_DESKTOP && document.getElementById("ds-dashboard").classList.contains("active")) renderDsDashboard();
   if(IS_DESKTOP && document.getElementById("ds-pedidos").classList.contains("active")) renderDsPedidos();
   if(IS_DESKTOP && document.getElementById("ds-ctacte").classList.contains("active")) renderDsCtaCte();
+};
+
+// Actualizar stock desktop cuando cambian los productos
+var _origRenderProductos = renderProductos;
+renderProductos = function(){
+  _origRenderProductos();
+  if(IS_DESKTOP && document.getElementById("ds-stock") && document.getElementById("ds-stock").classList.contains("active")) renderDsStock();
+};
+
+// Actualizar clientes desktop cuando cambian los clientes
+var _origRenderClientes = renderClientes;
+renderClientes = function(){
+  _origRenderClientes();
+  if(IS_DESKTOP && document.getElementById("ds-clientes") && document.getElementById("ds-clientes").classList.contains("active")) renderDsClientes();
 };
 
 // ===== PANEL DE CONTROL =====
@@ -4704,7 +4763,7 @@ window.addEventListener("resize", function(){
 </div>
 
 <!-- MODAL CIERRE MENSUAL -->
-<div class="overlay" id="cierreMensualOverlay" style="z-index:350;">
+<div class="overlay" id="cierreMensualOverlay">
   <div class="sheet" style="max-height:95vh;">
     <div class="sheet-handle"></div>
     <div style="padding:0 18px 6px;display:flex;justify-content:space-between;align-items:center;">
