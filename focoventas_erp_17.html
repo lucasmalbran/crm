@@ -671,6 +671,42 @@ h1,h2,h3,.syne{font-family:'Syne',sans-serif;}
           </div>
         </div>
 
+        <!-- IMPRESORA -->
+        <div class="ds-card">
+          <div class="ds-card-title">🖨️ Impresora de tickets</div>
+          <div style="display:flex;flex-direction:column;gap:14px;">
+            <div>
+              <div style="font-size:0.78rem;color:var(--muted);margin-bottom:6px;">Ancho del papel</div>
+              <select id="cfg_papel" onchange="onPapelChange()" style="width:100%;padding:9px 12px;background:var(--dark3);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:0.9rem;outline:none;">
+                <option value="58">58mm (térmica chica)</option>
+                <option value="80">80mm (térmica grande)</option>
+                <option value="custom">Personalizado...</option>
+              </select>
+            </div>
+            <div id="cfg_papel_custom_wrap" style="display:none;">
+              <div style="font-size:0.78rem;color:var(--muted);margin-bottom:6px;">Ancho del papel en mm</div>
+              <input type="number" id="cfg_papel_custom" min="40" max="120" placeholder="ej: 76" style="width:100%;padding:9px 12px;background:var(--dark3);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'Inter',sans-serif;font-weight:700;font-size:0.95rem;outline:none;">
+            </div>
+            <div>
+              <div style="font-size:0.78rem;color:var(--muted);margin-bottom:6px;">Ancho de impresión (área útil)</div>
+              <div style="display:flex;align-items:center;gap:8px;">
+                <input type="number" id="cfg_papel_contenido" min="30" max="115" placeholder="auto" style="flex:1;padding:9px 12px;background:var(--dark3);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'Inter',sans-serif;font-weight:700;font-size:0.95rem;outline:none;">
+                <span style="color:var(--muted);font-size:0.82rem;">mm</span>
+              </div>
+              <div style="font-size:0.72rem;color:var(--muted);margin-top:5px;">Si el ticket sale cortado a la derecha, bajá este valor. Si queda margen sin usar, subilo.</div>
+            </div>
+            <div>
+              <div style="font-size:0.78rem;color:var(--muted);margin-bottom:6px;">Tamaño de letra</div>
+              <select id="cfg_papel_fuente" style="width:100%;padding:9px 12px;background:var(--dark3);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:0.9rem;outline:none;">
+                <option value="10">Chica (10px)</option>
+                <option value="11">Normal (11px)</option>
+                <option value="12">Grande (12px)</option>
+                <option value="13">Muy grande (13px)</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
       </div>
     </div>
 
@@ -2116,16 +2152,18 @@ function imprimirTicket(formato){
       '</div>';
     }).join("");
 
+    var imp=(appConfig&&appConfig.impresora)||{papel:58,contenido:48,fuente:11};
+    var papelMM=imp.papel||58, contMM=imp.contenido||Math.max(30,papelMM-10), fz=imp.fuente||11;
     ticketHTML='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Ticket '+numPedido+'</title>'+
     '<style>'+
-      '@page{size:58mm auto;margin:0;}'+
-      'body{font-family:"Courier New",monospace;width:48mm;margin:0 auto;padding:1mm 0;color:#000;font-size:11px;}'+
+      '@page{size:'+papelMM+'mm auto;margin:0;}'+
+      'body{font-family:"Courier New",monospace;width:'+contMM+'mm;margin:0 auto;padding:1mm 0;color:#000;font-size:'+fz+'px;}'+
       '.center{text-align:center;}'+
-      '.logo{font-size:16px;font-weight:900;letter-spacing:-0.5px;}'+
+      '.logo{font-size:'+(fz+5)+'px;font-weight:900;letter-spacing:-0.5px;}'+
       '.divider{border:none;border-top:1px dashed #000;margin:5px 0;}'+
-      '.total-line{display:flex;justify-content:space-between;font-size:13px;font-weight:900;padding:4px 0;border-top:2px solid #000;}'+
-      '.footer{text-align:center;font-size:9px;color:#666;margin-top:6px;}'+
-      '@media print{.no-print{display:none!important;}body{width:48mm;}}'+
+      '.total-line{display:flex;justify-content:space-between;font-size:'+(fz+2)+'px;font-weight:900;padding:4px 0;border-top:2px solid #000;}'+
+      '.footer{text-align:center;font-size:'+(fz-2)+'px;color:#666;margin-top:6px;}'+
+      '@media print{.no-print{display:none!important;}body{width:'+contMM+'mm;}}'+
     '</style></head><body>'+
     '<div class="center">'+
       '<div class="logo"><span style="color:#d62b2b;">Foco</span><span style="color:#f4a020;">Ventas</span></div>'+
@@ -2153,7 +2191,7 @@ function imprimirTicket(formato){
     '<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"><\/script>'+
     '<script>function generarPDF(){'+
       'var el=document.body;'+
-      'var altoMM=Math.max(80,Math.ceil(el.scrollHeight*0.2646)+10);var opt={margin:[2,2,2,2],filename:"ticket.pdf",image:{type:"jpeg",quality:0.98},html2canvas:{scale:3},jsPDF:{unit:"mm",format:[58,altoMM],orientation:"portrait"}};'+
+      'var altoMM=Math.max(80,Math.ceil(el.scrollHeight*0.2646)+10);var opt={margin:[2,2,2,2],filename:"ticket.pdf",image:{type:"jpeg",quality:0.98},html2canvas:{scale:3},jsPDF:{unit:"mm",format:['+papelMM+',altoMM],orientation:"portrait"}};'+
       'html2pdf().set(opt).from(el).save();'+
     '}<\/script>'+
     '<button class="no-print" onclick="window.close()" style="width:100%;padding:8px;background:none;border:1px solid #ddd;border-radius:6px;font-size:11px;cursor:pointer;margin-top:6px;">Cerrar</button>'+
@@ -3996,6 +4034,8 @@ var appConfig = JSON.parse(localStorage.getItem("fv_config") || "null") || {
     verClientes: true
   }
 };
+// Defaults de impresora (para configs guardadas antes de esta versión)
+if(!appConfig.impresora) appConfig.impresora = { papel: 58, contenido: 48, fuente: 11 };
 
 function saveConfig(){
   localStorage.setItem("fv_config", JSON.stringify(appConfig));
@@ -4009,6 +4049,18 @@ function renderDsConfig(){
   document.getElementById("cfg_min_pedido").value = appConfig.minPedido || 0;
   document.getElementById("cfg_cierre_ruta").checked = appConfig.cierreRuta !== false;
   document.getElementById("cfg_ticket_auto").checked = appConfig.ticketAuto !== false;
+
+  // Impresora
+  var imp = appConfig.impresora || { papel: 58, contenido: 48, fuente: 11 };
+  var papelSel = document.getElementById("cfg_papel");
+  if(papelSel){
+    var esStd = imp.papel===58 || imp.papel===80;
+    papelSel.value = esStd ? String(imp.papel) : "custom";
+    document.getElementById("cfg_papel_custom_wrap").style.display = esStd ? "none" : "block";
+    document.getElementById("cfg_papel_custom").value = esStd ? "" : imp.papel;
+    document.getElementById("cfg_papel_contenido").value = imp.contenido || "";
+    document.getElementById("cfg_papel_fuente").value = String(imp.fuente || 11);
+  }
 
   // Vendedores
   renderConfigVendedores();
@@ -4057,9 +4109,24 @@ function guardarConfig(){
     var el=document.getElementById("cfg_perm_"+p);
     if(el) appConfig.permisos[p]=el.checked;
   });
+  // Impresora
+  var papelSel = document.getElementById("cfg_papel");
+  if(papelSel){
+    var papel = papelSel.value==="custom" ? (parseInt(document.getElementById("cfg_papel_custom").value)||58) : parseInt(papelSel.value);
+    var contenido = parseInt(document.getElementById("cfg_papel_contenido").value) || Math.max(30, papel-10);
+    var fuente = parseInt(document.getElementById("cfg_papel_fuente").value)||11;
+    appConfig.impresora = { papel: papel, contenido: Math.min(contenido, papel-2), fuente: fuente };
+  }
   saveConfig();
   aplicarConfigAVendedor();
   showToast("✅ Configuración guardada");
+}
+
+function onPapelChange(){
+  var v = document.getElementById("cfg_papel").value;
+  document.getElementById("cfg_papel_custom_wrap").style.display = v==="custom" ? "block" : "none";
+  // Sugerir área útil automática
+  if(v!=="custom") document.getElementById("cfg_papel_contenido").value = parseInt(v)-10;
 }
 
 function aplicarConfigAVendedor(){
@@ -4686,7 +4753,7 @@ window.addEventListener("resize", function(){
       </button>
       <button onclick="imprimirTicket('58mm')" style="padding:18px;background:var(--card);border:1.5px solid var(--border);border-radius:14px;color:var(--text);cursor:pointer;display:flex;align-items:center;gap:14px;text-align:left;">
         <span style="font-size:2rem;">🧾</span>
-        <div><div style="font-family:'Syne',sans-serif;font-weight:700;font-size:1rem;">Ticket 58mm</div><div style="font-size:0.78rem;color:var(--muted);margin-top:2px;">Ticket compacto · Impresora térmica</div></div>
+        <div><div style="font-family:'Syne',sans-serif;font-weight:700;font-size:1rem;">Ticket térmico</div><div style="font-size:0.78rem;color:var(--muted);margin-top:2px;">Ticket compacto · Impresora térmica</div></div>
       </button>
       <button onclick="document.getElementById('ticketFormatoOverlay').classList.remove('active')" style="padding:12px;border-radius:12px;border:1.5px solid var(--border);background:none;color:var(--muted);font-size:0.9rem;cursor:pointer;">Cancelar</button>
     </div>
